@@ -2,6 +2,7 @@ package org.xmlcml.svg2xml.table;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -546,6 +547,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 				String value1 = value.substring(value.indexOf("/")+1);
 				td.appendChild(value1);
 				td.setClassAttribute((value1.trim().length() == 0) ? CELL_EMPTY : CELL_FULL);
+                                addLayoutDataAttributes(tr, td, rectij, rectjList, irow);
 			}
 		}
 	}
@@ -627,6 +629,27 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 			}
 		}
 	}
+        
+        /**
+         * Record page layout data as HTML data attributes
+         */
+        private void addLayoutDataAttributes(HtmlTr tr, HtmlTd td, SVGShape rectij, List<SVGRect> rectjList, int irow) {
+            DecimalFormat decFormat = new DecimalFormat("0.00");
+     
+            // Record position data in each cell
+            if (rectij != null) {
+                double cellMinX = rectij.getBoundingBox().getXMin();
+                double cellMinY = rectjList.get(irow).getBoundingBox().getYMin();
+                td.setAttribute("data-cellminx", decFormat.format(cellMinX));
+                td.setAttribute("data-cellminy", decFormat.format(cellMinY));
+
+                // As soon as we get a non-empty cell set the row minimum x, y once  
+                if (tr.getAttributeValue("data-rowminy") == null) {
+                    tr.setAttribute("data-rowminx", decFormat.format(cellMinX));
+                    tr.setAttribute("data-rowminy", decFormat.format(cellMinY));
+                }
+            }
+        }
 
 	// FIXME empty caption
 	private void addCaption(SVGElement svgElement, HtmlTable table) {
