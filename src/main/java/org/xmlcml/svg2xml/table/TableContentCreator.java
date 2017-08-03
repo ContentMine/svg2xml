@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import nu.xom.Attribute;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -54,7 +55,18 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	private static final String DOT_PNG = ".png";
 	private static final String CELL_FULL = "cell";
 	private static final String CELL_EMPTY = "empty";
-
+        private static final String DATA_CELL_MIN_X = "data-cellminx";
+        private static final String DATA_CELL_MIN_Y = "data-cellminy";
+        private static final String DATA_ROW_MIN_X = "data-rowminx";
+        private static final String DATA_ROW_MIN_Y = "data-rowminy";
+        
+        private static final String DATA_ATTR_ROLE = "data-role";
+        private static final String ROLE_OBSERVATION_LABEL = "obslabel";
+        private static final String ROLE_OBSERVATION = "obs";
+        private static final String DATA_ATTR_TBL_SEG = "data-tblseg";
+        private static final String TBL_SEG_SUBTABLE_TITLE = "subtabletitle";
+        
+                 
 	private List<HorizontalRuler> rulerList;
 	private List<TableSection> tableSectionList;
 	private IntRangeArray rangesArray;
@@ -66,6 +78,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	private TableFooterSection tableFooterSection;
 	private SVGElement annotatedSvgChunk;
 	private double rowDelta = 2.5; //large to manage suscripts
+        private final double xEpsilon = 0.1;
 	
 	public TableContentCreator() {
 	}
@@ -461,12 +474,14 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 		int bodyCols = getGElements(annotatedSvgChunk).size();
 		addHeader(annotatedSvgChunk, table, bodyCols);
 		addBody(annotatedSvgChunk, table);
+                
 		return html;
 	}
 
 	private void addHeader(SVGElement svgElement, HtmlTable table, int bodyCols) {
 		int cols = 0;
 		HtmlTr tr = new HtmlTr();
+                tr.addAttribute(new Attribute("data-tblrole", "columnheaderrow"));
 		table.appendChild(tr);
 		SVGElement g = svgElement == null ? null : (SVGElement) XMLUtil.getSingleElement(svgElement, 
 				".//*[local-name()='g' and @class='"+TableHeaderSection.HEADER_COLUMN_BOXES+"']");
@@ -523,6 +538,30 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 		for (int irow = 0; irow < allRanges.size(); irow++) {
 			createRowsAndAddToTable(table, columnList, irow);
 		}
+                
+                // Re-structure into subtables
+                HtmlTable transformedTable = createSubtablesFromIndents(table, columnList.size());
+                
+                // If transformed table exists and is basically well formed
+                // then replace the raw set of body rows (containing tds)
+                // Better to use thead tbody tfoot structure?
+                if (transformedTable != null && transformedTable.getRows() != null) {
+                    // Replace the rows after the header rows
+                    // Better to use a tbody and replace that?
+                    ArrayList<HtmlTr> currentRows = (ArrayList<HtmlTr>)table.getRows();
+                    
+                    for (HtmlTr tr : currentRows) {
+                        Attribute attr = tr.getAttribute("data-tblrole");
+                        
+                        if (attr == null || !("columnheaderrow".equals(attr.getValue()))) {
+                            table.removeChild(tr);
+                        }
+                    }
+                     
+                    for (HtmlTr stTr : transformedTable.getRows()) {
+                        table.appendChild((HtmlTr)(HtmlTr.create(stTr)));
+                    }
+                }
 	}
 
 	private List<SVGG> getGElements(SVGElement svgElement) {
@@ -535,6 +574,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	private void createRowsAndAddToTable(HtmlTable table, List<List<SVGRect>> columnList, int irow) {
 		HtmlTr tr = new HtmlTr();
 		table.appendChild(tr);
+                double tblMinX = 0.0;
 		for (int jcol = 0; jcol < columnList.size(); jcol++) {
 			List<SVGRect> rectjList = columnList.get(jcol);
 			if (irow >= rectjList.size()) {
@@ -634,21 +674,285 @@ public class TableContentCreator extends PageLayoutAnalyzer {
          * Record page layout data as HTML data attributes
          */
         private void addLayoutDataAttributes(HtmlTr tr, HtmlTd td, SVGShape rectij, List<SVGRect> rectjList, int irow) {
-            DecimalFormat decFormat = new DecimalFormat("0.00");
+            DecimalFormat decFormat = new DecimalFormat("0.000");
      
             // Record position data in each cell
             if (rectij != null) {
                 double cellMinX = rectij.getBoundingBox().getXMin();
                 double cellMinY = rectjList.get(irow).getBoundingBox().getYMin();
-                td.setAttribute("data-cellminx", decFormat.format(cellMinX));
-                td.setAttribute("data-cellminy", decFormat.format(cellMinY));
+                td.setAttribute(DATA_CELL_MIN_X, decFormat.format(cellMinX));
+                td.setAttribute(DATA_CELL_MIN_Y, decFormat.format(cellMinY));
 
                 // As soon as we get a non-empty cell set the row minimum x, y once  
-                if (tr.getAttributeValue("data-rowminy") == null) {
-                    tr.setAttribute("data-rowminx", decFormat.format(cellMinX));
-                    tr.setAttribute("data-rowminy", decFormat.format(cellMinY));
+                if (tr.getAttributeValue(DATA_ROW_MIN_Y) == null) {
+                    tr.setAttribute(DATA_ROW_MIN_X, decFormat.format(cellMinX));
+                    tr.setAttribute(DATA_ROW_MIN_Y, decFormat.format(cellMinY));
+                }                
+            }
+        }
+        
+        private boolean rowIsRightClear(HtmlTr tr) {
+            boolean isRightClear = false;
+            
+            List<HtmlTd> tds = tr.getTdChildren();
+            
+            if (!tds.isEmpty()) {
+                // First cell has content
+                isRightClear = (tds.get(0).getClassAttribute().equals("cell"));
+                
+                if (isRightClear) {
+                    // All other cells are empty
+                    int jcol = 1;
+                    
+                    while (isRightClear && jcol < tds.size()) {
+                        isRightClear = (isRightClear && tds.get(jcol).getClassAttribute().equals("empty"));
+                        jcol++;
+                    }
                 }
             }
+            
+            return isRightClear;
+        }
+        
+        /**
+         * Use layout information in HTML to find subtables using relative x positions
+         * across rows.
+         * @param table The table as a flat list of rows with cells marked up with raw x,y layout values 
+         * @return A transformed copy of the table with subtables as nested tables
+         */
+        private HtmlTable createSubtablesFromIndents(HtmlTable table, int columnCount) {
+            HtmlTable restructTable = null;
+            
+            if (table != null) {
+                double curMinX = 0.0;
+                double prevMinX = 0.0;
+                
+                double curRowMinX;
+                HtmlTr prevRow = null;           
+                           
+                List<HtmlTr> rows = table.getRows();
+                
+                HtmlTable currentSubtable = null;
+                restructTable = new HtmlTable();
+                
+                LOG.debug("---");
+                                    
+                for (int irow = 0; irow < rows.size(); irow++) {
+                    HtmlTr tr = rows.get(irow);
+                    
+                    // Set prevRow every time.
+                    // Defer processing until next line when indent relationship is known
+                    // Logic from indents determines where prevRow is put into restruct table
+                    
+                    // Skip the header row
+                    ArrayList<HtmlTh> ths = (ArrayList<HtmlTh>)tr.getThChildren();
+                    
+                    if (ths != null && ths.size() > 0) {
+                        // A header row cannot be part of a subtable
+                        tr.addAttribute(new Attribute("data-tblrole","columnheaderrow"));
+                        continue;
+                    }
+                    
+                    // Get the min X of the current row
+                    Attribute attr = tr.getAttribute("data-rowminx");
+                    curRowMinX = Double.parseDouble(attr == null ? "0.0" : attr.getValue());
+                    
+                    // Find left edge of current table or subtable
+                    if (curRowMinX > 0.0) {
+                        curMinX = curRowMinX;
+                    }
+                    
+                    // Make a copy of the current row reference and 
+                    // store it until its role is determined at the next row
+                    if (irow == 1) {
+                        prevRow = tr;
+                    }
+                    
+                    LOG.debug("R:"+irow+"\t"+extractRowLabel(tr));
+                    
+                    if (curMinX != 0.0) {
+                        if (isGreaterThan(curMinX, prevMinX, xEpsilon)) {
+                            // INDENT or FIRST
+                            if (prevMinX > 0.0) {
+                                // This is an indent -- a new subtable has started
+                                LOG.debug("ST:Indent: ("+prevMinX+"->"+curMinX+")");
+                                LOG.debug("R:"+irow+"\t"+"[IN]\t\t\t"+"ST?:"+(currentSubtable != null ? "Y" : "N"));
+                                
+                                currentSubtable = new HtmlTable();
+
+                                // The previous line was subtable heading line
+                                if (irow > 0) {      
+                                    LOG.debug("Add ST header:"+irow+"\t"+extractRowLabel(prevRow));
+                                    this.addSubtableRow(currentSubtable, prevRow, true);
+                                }
+                            } 
+                        } else if (isEqualTo(curMinX, prevMinX, xEpsilon)) {
+                            // ALIGNED
+                            LOG.debug("Obs row: (" + prevMinX + "==" + curMinX + ")");
+                            LOG.debug("R:"+irow+"\t"+"[ALIGN]\t\t\t"+"ST?:"+(currentSubtable != null ? "Y" : "N"));
+                            if (curMinX != 0.0) {        
+                                if (!rowIsRightClear(tr)) {
+                                    if (tr.getTd(0) != null) {
+                                        tr.getTd(0).setAttribute("data-role", "obslabel");
+                                    }
+                                }
+                                
+                                if (currentSubtable != null) {
+                                    addSubtableRow(currentSubtable, prevRow, false);
+                                } else {
+                                    addTopLevelRow(restructTable, prevRow);
+                                }
+                            } 
+                        } else { 
+                            // curMinX < prevMinX, within tolerance
+                            // OUTDENT
+                            LOG.debug("R:"+irow+"\t"+"[OUT]\t\t\t"+"ST?:"+(currentSubtable != null ? "Y" : "N"));
+                            // This is the start of a new section
+                            // The previous line is the end of the subtable
+                            this.addSubtableRow(currentSubtable, prevRow, false);
+                            List<HtmlTr> stRows = currentSubtable.getRows();
+                            LOG.debug("ST:Complete: ("+prevMinX+"->"+curMinX+"):total rows:"+(stRows != null ? stRows.size() : 0));
+                            
+                            // Add the completed subtable to the restructured table
+                            HtmlTr subtableWrapperRow = wrapSubtableAsRow(currentSubtable, columnCount);
+                            restructTable.appendChild(subtableWrapperRow);
+  
+                            currentSubtable = null; 
+                        }
+                        
+                        // Make a copy of the current row reference and 
+                        // store it until its role is determined at the next row
+                        prevRow = tr;
+                    
+                        prevMinX = curRowMinX;
+                    }
+                }
+                
+                // At the end of main table processing 
+                // and allocate final row and
+                // close any final incomplete subtable
+                if (currentSubtable != null) {
+                    addSubtableRow(currentSubtable, prevRow, false);
+                    
+                    LOG.debug("ST:Complete At Table end: (" + prevMinX + "->" + curMinX + "):total rows:" + currentSubtable);
+                    // Wrap up subtable rows as a row in the transformed table
+                    HtmlTr subtableWrapperRow = wrapSubtableAsRow(currentSubtable, columnCount);
+                    restructTable.appendChild(subtableWrapperRow);
+                } else {
+                    addTopLevelRow(restructTable, prevRow);
+                }
+            }
+            
+            return restructTable;
+        }
+
+        /**
+         * Helper method.  
+         * Add top-level row to table.
+         * Top-level rows are observation labels and observation data.
+         */
+        private void addTopLevelRow(HtmlTable mainTable, HtmlTr topLevelRow) {
+            if (topLevelRow == null) {
+                return;
+            }
+            
+            topLevelRow.setAttribute(ROLE_OBSERVATION, ROLE_OBSERVATION);
+            
+            if (!rowIsRightClear(topLevelRow)) {
+                if (topLevelRow.getTd(0) != null) {
+                    topLevelRow.getTd(0).setAttribute(DATA_ATTR_ROLE, ROLE_OBSERVATION_LABEL);
+                }
+            }
+
+            // Add a deep-copy of the row to mainTable
+            HtmlTr trDeepCopy = (HtmlTr) (HtmlTr.create(topLevelRow));
+            mainTable.addRow(trDeepCopy);
+        }
+
+        /**
+         * Helper method.  
+         * Add top-level row to table.
+         * Top-level rows are observation labels and observation data.
+         */
+        private void addSubtableRow(HtmlTable subTable, HtmlTr subtableRow, boolean isSubtableHeading) {
+            if (subTable == null) {
+                return;
+            }
+            
+            String rowLabel = extractRowLabel(subtableRow);
+            LOG.debug("addSubtableRow: Add ST "+(isSubtableHeading ? "header" : "row" )+":"+rowLabel);
+            
+            if (isSubtableHeading) {
+                subtableRow.setAttribute(DATA_ATTR_TBL_SEG, TBL_SEG_SUBTABLE_TITLE);   
+            } else {
+                subtableRow.setAttribute(DATA_ATTR_ROLE, ROLE_OBSERVATION);
+            }
+            
+            if (!rowIsRightClear(subtableRow)) {
+                if (subtableRow.getTd(0) != null) {
+                    subtableRow.getTd(0).setAttribute(DATA_ATTR_ROLE, ROLE_OBSERVATION_LABEL);
+                }
+            }
+
+            // Add a deep-copy of the row to subTable
+            HtmlTr trDeepCopy = (HtmlTr) (HtmlTr.create(subtableRow));
+            subTable.addRow(trDeepCopy);
+        }
+        
+        /**
+         * Helper method.
+         * @return Label 
+         */
+        String extractRowLabel(HtmlTr row) {
+            String rowLabel = "";
+            
+            if (row != null) {
+                if (row.getTd(0) != null) {
+                    rowLabel = row.getTd(0).getValue();
+                }
+            } 
+            
+            return rowLabel;
+        }
+              
+        /**
+         * The current assumption is that the main table comprises a list of tr only
+         * Wrap the subtable <table> element in a td and tr for compatibility with this.
+         * FIXME Subtables rows should be contained in a tbody instead 
+         * to avoid need for extra tr, td and td colspan=columnCount, with adjustments 
+         * to downstream processing of tables as tr lists
+         * @param subtable
+         * @param columnCount
+         * @return 
+         */
+        private HtmlTr wrapSubtableAsRow(HtmlTable subtable, int columnCount) {
+            HtmlTr subtableWrapperRow = new HtmlTr();
+            // Need to add a colspan for main table columns
+            // so nested table is displayed across the width of the enclosing table
+            HtmlTd subtableWrapperCell = new HtmlTd();
+            subtableWrapperCell.addAttribute(new Attribute("colspan", Integer.toString(columnCount)));
+            subtable.setClassAttribute("subtable");
+            subtableWrapperCell.appendChild(subtable);
+            
+            subtableWrapperRow.appendChild(subtableWrapperCell);
+            
+            return subtableWrapperRow;
+        }
+        
+        /**
+         * Compare coordinates with explicit tolerance
+         * 
+         */
+        private boolean isEqualTo(double d1, double d2, double tolerance) {
+            return (Math.abs(d1 - d2) <= tolerance);
+        }
+        
+        /**
+         * Compare coordinates with explicit tolerance
+         * 
+         */
+        private boolean isGreaterThan(double d1, double d2, double tolerance) {
+            return ((d1 - d2) > tolerance);
         }
 
 	// FIXME empty caption
