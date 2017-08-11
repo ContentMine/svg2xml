@@ -24,7 +24,7 @@ import org.xmlcml.svg2xml.util.GraphPlot;
  *
  */
 public class TableHeaderSection extends TableSection {
-	private static final String HEADER_BOXES = "header.boxes";
+	static final String HEADER_BOXES = "header.boxes";
 	static final String HEADER_COLUMN_BOXES = "header.columnBoxes";
 	static final Logger LOG = Logger.getLogger(TableHeaderSection.class);
 	static {
@@ -156,7 +156,14 @@ public class TableHeaderSection extends TableSection {
 			for (ColumnGroup columnGroup : headerRow.getOrCreateColumnGroupList()) {
 				Real2Range bbox = columnGroup.getBoundingBox();
 				SVGShape plotBox = GraphPlot.plotBox(bbox, colors[1], opacity[1]);
-				String title = "HEADERBOX: "+i;
+                                List<Phrase> colGroupPhrases = columnGroup.getPhrases();
+                                String colGroupPhraseString = "";
+                                for (Phrase phrase : colGroupPhrases) {
+                                    colGroupPhraseString += phrase.getPrintableString();
+                                }
+                                
+				String title = "HEADERBOX: "+i+"/"+colGroupPhraseString;
+                                
 				SVGTitle svgTitle = new SVGTitle(title);
 				plotBox.appendChild(svgTitle);
 				g.appendChild(plotBox);

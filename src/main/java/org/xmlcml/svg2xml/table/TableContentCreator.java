@@ -8,12 +8,14 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import nu.xom.Attribute;
+import nu.xom.Elements;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.xmlcml.euclid.IntRange;
 import org.xmlcml.euclid.IntRangeArray;
 import org.xmlcml.euclid.Real2;
+import org.xmlcml.euclid.Real2Range;
 import org.xmlcml.euclid.RealRange;
 import org.xmlcml.euclid.Transform2;
 import org.xmlcml.graphics.svg.SVGElement;
@@ -28,6 +30,7 @@ import org.xmlcml.html.HtmlHtml;
 import org.xmlcml.html.HtmlTable;
 import org.xmlcml.html.HtmlTd;
 import org.xmlcml.html.HtmlTh;
+import org.xmlcml.html.HtmlThead;
 import org.xmlcml.html.HtmlTr;
 import org.xmlcml.svg2xml.page.PageLayoutAnalyzer;
 import org.xmlcml.svg2xml.table.TableSection.TableSectionType;
@@ -56,7 +59,9 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	private static final String CELL_FULL = "cell";
 	private static final String CELL_EMPTY = "empty";
         private static final String DATA_CELL_MIN_X = "data-cellminx";
+        private static final String DATA_CELL_MAX_X = "data-cellmaxx";
         private static final String DATA_CELL_MIN_Y = "data-cellminy";
+        private static final String DATA_CELL_MAX_Y = "data-cellmaxy";
         private static final String DATA_ROW_MIN_X = "data-rowminx";
         private static final String DATA_ROW_MIN_Y = "data-rowminy";
         
@@ -79,6 +84,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	private SVGElement annotatedSvgChunk;
 	private double rowDelta = 2.5; //large to manage suscripts
         private final double xEpsilon = 0.1;
+        private final DecimalFormat decFormat = new DecimalFormat("0.000");
 	
 	public TableContentCreator() {
 	}
@@ -479,17 +485,89 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	}
 
 	private void addHeader(SVGElement svgElement, HtmlTable table, int bodyCols) {
-		int cols = 0;
+                int cols = 0;
 		HtmlTr tr = new HtmlTr();
                 tr.addAttribute(new Attribute("data-tblrole", "columnheaderrow"));
-		table.appendChild(tr);
+
 		SVGElement g = svgElement == null ? null : (SVGElement) XMLUtil.getSingleElement(svgElement, 
 				".//*[local-name()='g' and @class='"+TableHeaderSection.HEADER_COLUMN_BOXES+"']");
 		if (g != null) {
 			cols = addHeaderBoxes(tr, g, bodyCols);
 		}
+                
+                int colGroups = 0;
+                HtmlTr trColGroups = new HtmlTr();
+                SVGElement gColGroups = svgElement == null ? null : (SVGElement) XMLUtil.getSingleElement(svgElement, 
+				".//*[local-name()='g' and @class='"+TableHeaderSection.HEADER_BOXES+"']");
+		if (gColGroups != null) {
+                    // TODO pass g (headers SVG) into this method not HTML
+			colGroups = addColumnGroups(trColGroups, gColGroups, tr, bodyCols - cols);
+		}
+                
+              /// table.appendChild(trColGroups);
+              /// table.appendChild(tr);
+                
+                // TEST
+                HtmlThead htmlThead = new HtmlThead();
+                htmlThead.appendChild(trColGroups);
+                htmlThead.appendChild(tr);
+                
+                table.appendChild(htmlThead);
 	}
+        
+        private int addColumnGroups(HtmlTr tr, SVGElement g, HtmlTr trHeaders, int bodyDelta) { 
+            // TODO Initially extract and add row
+            // Later consider making use of <colgroup> and <col> elements
+            // within <thead> or main <table>
+            List<SVGRect> rects = SVGRect.extractSelfAndDescendantRects(g);
+            int colGroups = rects.size();
+            LOG.trace("Column groups: "+colGroups);
+            
+            for (int i = 0; i < bodyDelta; i++) {
+                HtmlTh th = new HtmlTh();
+                tr.appendChild(th);
+            }
+         
+            // TODO Spans
+            for (int i = 0; i < colGroups; i++) {
+                SVGRect rect = rects.get(i);   // messy but has to be rewritten
+                String title = rect.getValue();   // messy but has to be rewritten
+                title = title.replace(" //", "");
+                HtmlTh th = new HtmlTh();
+                th.setClassAttribute(CELL_FULL);
+                double cellMinX = rect.getBoundingBox().getXMin();
+                double cellMaxX = rect.getBoundingBox().getXMax();
+                th.setAttribute(DATA_CELL_MIN_X, decFormat.format(cellMinX));
+                th.setAttribute(DATA_CELL_MAX_X, decFormat.format(cellMaxX));
+          ////      int spans = spansForColumnGroup(rect, trHeaders);
+                th.appendChild(title.substring(title.indexOf("/") + 1));
+                tr.appendChild(th);
+            }
+            
+            return colGroups;
+        }
+        
+        private int spansForColumnGroup(SVGRect colGroup, HtmlTr headerRow) {
+            int colGroupSpans = 0;
 
+            Real2Range bbox = colGroup.getBoundingBox();
+            RealRange colGroupXRange = bbox.getXRange();
+            List<HtmlTh> headerCells = headerRow.getThChildren();
+            for (HtmlTh th : headerCells) {
+                /// TODO no values here (although attrs have been set previously)
+                Double minX = Double.parseDouble(th.getAttributeValue("data-cellminx"));
+                Double maxX = Double.parseDouble(th.getAttributeValue("data-cellmaxx"));
+                if (!minX.equals(maxX)) {  // TODO This indicate a fatal issue
+                    RealRange xRange = new RealRange(minX, maxX);
+                    if (colGroupXRange.intersectsWith(xRange)) {
+                        colGroupSpans++;
+                    }
+                }
+            }
+
+            return colGroupSpans;
+        }
+        
 	private int addHeaderBoxes(HtmlTr tr, SVGElement g, int bodyCols) {
 		List<SVGRect> rects = SVGRect.extractSelfAndDescendantRects(g);
 		int headerCols = rects.size();
@@ -501,11 +579,14 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 		}
 		for (int i = 0; i < headerCols; i++) {
 			SVGRect rect = rects.get(i);   // messy but has to be rewritten
-			Real2 xy = rect.getXY();
 			String title = rect.getValue();   // messy but has to be rewritten
 			title = title.replace(" //", "");
 			HtmlTh th = new HtmlTh();
 			th.setClassAttribute(CELL_FULL);
+                        double cellMinX = rect.getBoundingBox().getXMin();
+                        double cellMaxX = rect.getBoundingBox().getXMax();
+                        th.setAttribute(DATA_CELL_MIN_X, decFormat.format(cellMinX));
+                        th.setAttribute(DATA_CELL_MAX_X, decFormat.format(cellMaxX));
 			th.appendChild(title.substring(title.indexOf("/")+1));
 			tr.appendChild(th);
 		}
