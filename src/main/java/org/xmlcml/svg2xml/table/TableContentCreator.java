@@ -8,15 +8,13 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import nu.xom.Attribute;
-import nu.xom.Elements;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.xmlcml.euclid.IntRange;
 import org.xmlcml.euclid.IntRangeArray;
-import org.xmlcml.euclid.Real2;
-import org.xmlcml.euclid.Real2Range;
 import org.xmlcml.euclid.RealRange;
+import org.xmlcml.euclid.RealRange.Direction;
 import org.xmlcml.euclid.Transform2;
 import org.xmlcml.graphics.svg.SVGElement;
 import org.xmlcml.graphics.svg.SVGG;
@@ -50,7 +48,9 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	}
 	
 	public final static Pattern TABLE_N = Pattern.compile("(T[Aa][Bb][Ll][Ee]\\s+\\d+\\.?\\s+(?:\\(cont(inued)?\\.?\\))?\\s*)");
-	private static final String TABLE_FOOTER = "table.footer";
+	private static final Pattern HEADERBOX = Pattern.compile("HEADERBOX: (\\d+)");
+                    
+        private static final String TABLE_FOOTER = "table.footer";
 	private static final String TABLE_BODY = "table.body";
 	private static final String TABLE_HEADER = "table.header";
 	private static final String TABLE_TITLE = "table.title";
@@ -70,6 +70,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
         private static final String ROLE_OBSERVATION = "obs";
         private static final String DATA_ATTR_TBL_SEG = "data-tblseg";
         private static final String TBL_SEG_SUBTABLE_TITLE = "subtabletitle";
+        private static final String COLSPAN = "colspan";
         
                  
 	private List<HorizontalRuler> rulerList;
@@ -84,6 +85,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	private SVGElement annotatedSvgChunk;
 	private double rowDelta = 2.5; //large to manage suscripts
         private final double xEpsilon = 0.1;
+        private final double colHeaderGroupXEpsilon = 10; // No smaller value works, especially for finding the end of the spanning header
         private final DecimalFormat decFormat = new DecimalFormat("0.000");
 	
 	public TableContentCreator() {
@@ -495,77 +497,142 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 			cols = addHeaderBoxes(tr, g, bodyCols);
 		}
                 
-                int colGroups = 0;
-                HtmlTr trColGroups = new HtmlTr();
+                HtmlThead htmlThead = new HtmlThead();
                 SVGElement gColGroups = svgElement == null ? null : (SVGElement) XMLUtil.getSingleElement(svgElement, 
 				".//*[local-name()='g' and @class='"+TableHeaderSection.HEADER_BOXES+"']");
 		if (gColGroups != null) {
-                    // TODO pass g (headers SVG) into this method not HTML
-			colGroups = addColumnGroups(trColGroups, gColGroups, tr, bodyCols - cols);
+                    addColumnGroups(htmlThead, gColGroups, g, bodyCols - cols);
 		}
-                
-              /// table.appendChild(trColGroups);
-              /// table.appendChild(tr);
-                
-                // TEST
-                HtmlThead htmlThead = new HtmlThead();
-                htmlThead.appendChild(trColGroups);
+               
                 htmlThead.appendChild(tr);
                 
                 table.appendChild(htmlThead);
 	}
         
-        private int addColumnGroups(HtmlTr tr, SVGElement g, HtmlTr trHeaders, int bodyDelta) { 
-            // TODO Initially extract and add row
-            // Later consider making use of <colgroup> and <col> elements
-            // within <thead> or main <table>
-            List<SVGRect> rects = SVGRect.extractSelfAndDescendantRects(g);
-            int colGroups = rects.size();
-            LOG.trace("Column groups: "+colGroups);
+        /**
+         * Take a flat list of column group headers and use the annotated index to 
+         * separate them into the correct set of rows.
+         * @param rects
+         * @return 
+         */
+        private List<List<SVGRect>> createColumnGroupRows(List<SVGRect> headerBoxRects) {
+            List<List<SVGRect>> colGroupHeaderRows = new ArrayList<List<SVGRect>>();
             
-            for (int i = 0; i < bodyDelta; i++) {
-                HtmlTh th = new HtmlTh();
-                tr.appendChild(th);
-            }
-         
-            // TODO Spans
-            for (int i = 0; i < colGroups; i++) {
-                SVGRect rect = rects.get(i);   // messy but has to be rewritten
-                String title = rect.getValue();   // messy but has to be rewritten
-                title = title.replace(" //", "");
-                HtmlTh th = new HtmlTh();
-                th.setClassAttribute(CELL_FULL);
-                double cellMinX = rect.getBoundingBox().getXMin();
-                double cellMaxX = rect.getBoundingBox().getXMax();
-                th.setAttribute(DATA_CELL_MIN_X, decFormat.format(cellMinX));
-                th.setAttribute(DATA_CELL_MAX_X, decFormat.format(cellMaxX));
-          ////      int spans = spansForColumnGroup(rect, trHeaders);
-                th.appendChild(title.substring(title.indexOf("/") + 1));
-                tr.appendChild(th);
-            }
-            
-            return colGroups;
-        }
-        
-        private int spansForColumnGroup(SVGRect colGroup, HtmlTr headerRow) {
-            int colGroupSpans = 0;
-
-            Real2Range bbox = colGroup.getBoundingBox();
-            RealRange colGroupXRange = bbox.getXRange();
-            List<HtmlTh> headerCells = headerRow.getThChildren();
-            for (HtmlTh th : headerCells) {
-                /// TODO no values here (although attrs have been set previously)
-                Double minX = Double.parseDouble(th.getAttributeValue("data-cellminx"));
-                Double maxX = Double.parseDouble(th.getAttributeValue("data-cellmaxx"));
-                if (!minX.equals(maxX)) {  // TODO This indicate a fatal issue
-                    RealRange xRange = new RealRange(minX, maxX);
-                    if (colGroupXRange.intersectsWith(xRange)) {
-                        colGroupSpans++;
+            if (headerBoxRects != null && headerBoxRects.size() > 0) {
+                for (SVGRect rect : headerBoxRects) {
+                    // Allocate rects to rows according to the numbering in the annot
+                    String title = rect.getValue();
+                    Matcher matcher = HEADERBOX.matcher(title);
+                    if (matcher.find())
+                    {
+                        String find = matcher.group(1);
+                        Integer colGroupRow = Integer.parseInt(find);
+                        // Add to the array of rects
+                        if (colGroupRow > colGroupHeaderRows.size() - 1) {
+                            List<SVGRect> colGroupHeaderRow = new ArrayList<SVGRect>();
+                            colGroupHeaderRows.add(colGroupHeaderRow);
+                        }
+                        
+                        colGroupHeaderRows.get(colGroupRow).add(rect);
                     }
                 }
-            }
+            }   
+            
+            return colGroupHeaderRows;
+        } 
+        
+        private void addColumnGroups(HtmlThead htmlHead, SVGElement g, SVGElement hdrG, int bodyDelta) { 
+            // TODO consider making use of <colgroup> and <col> elements
+            // within <thead> or main <table>
+            List<SVGRect> columnGroupRects = SVGRect.extractSelfAndDescendantRects(g);
+            List<List<SVGRect>> cgRows = createColumnGroupRows(columnGroupRects);
+            HtmlTr tr;
+            
+            List<SVGRect> hdrRects = SVGRect.extractSelfAndDescendantRects(hdrG);
 
-            return colGroupSpans;
+            // Iterate over header columns
+            // and match left-hand of colgroup to underlying
+            // grid, filling with empty th as needed
+            HtmlTh th = new HtmlTh();
+            
+            for (int cgr = 0; cgr < cgRows.size(); cgr++) {
+                List<SVGRect> rects = cgRows.get(cgr);
+                tr = new HtmlTr();
+                int cgIndex = 0;
+                int colspan = 0;
+                boolean getNextColGroupDetails = false;
+                
+                SVGRect rect = rects.get(cgIndex);
+                String title = rect.getValue();   // messy but has to be rewritten
+                title = title.replace(" //", "");
+                double colGroupMinX = rect.getBoundingBox().getXMin();
+                double colGroupMaxX = rect.getBoundingBox().getXMax();
+                RealRange colGroupRange = rect.getRealRange(Direction.HORIZONTAL);
+                 
+                for (int i = 0; i < bodyDelta; i++) {
+                    th.setClassAttribute(CELL_EMPTY);
+                    HtmlTh thDeepCopy = (HtmlTh) (HtmlTh.create(th));
+                    tr.appendChild(thDeepCopy);
+                }
+                
+                for (int i = 0; i < hdrRects.size(); i++) {
+                    if (cgIndex > rects.size() - 1) {
+                        // No more col groups -- fill with empty cells
+                        th.setClassAttribute(CELL_EMPTY);
+                        HtmlTh thDeepCopy = (HtmlTh) (HtmlTh.create(th));
+                        tr.appendChild(thDeepCopy);
+                        th = new HtmlTh();
+                        continue;
+                    }
+                                             
+                    // Get details of next spanning column group
+                    if (getNextColGroupDetails) {
+                        rect = rects.get(cgIndex);
+                        title = rect.getValue();   // messy but has to be rewritten
+                        title.replace(" //", "");
+                        colGroupMinX = rect.getBoundingBox().getXMin();
+                        colGroupMaxX = rect.getBoundingBox().getXMax();
+                        colGroupRange = rect.getRealRange(Direction.HORIZONTAL);
+                        getNextColGroupDetails = false;
+                    }
+                    
+                    SVGRect headerCol = hdrRects.get(i);
+                    double headerColMinX = headerCol.getBoundingBox().getXMin();
+                    double headerColMaxX = headerCol.getBoundingBox().getXMax();
+                    RealRange headerColRange = headerCol.getRealRange(Direction.HORIZONTAL);
+
+                    if (colGroupRange.intersectsWith(headerColRange)) {
+                        th.setClassAttribute(CELL_FULL);
+                        if (isEqualTo(colGroupMinX, headerColMinX, colHeaderGroupXEpsilon)) {
+                            // This is the start of the span
+                            th.appendChild(title.substring(title.indexOf("/") + 1));
+                            colspan++;
+                        } else if (isEqualTo(colGroupMaxX, headerColMaxX, colHeaderGroupXEpsilon)) {
+                            // This is the final part of the span
+                            if (++colspan > 1) {
+                                th.setAttribute(COLSPAN, Integer.toString(colspan));
+                            }
+                            cgIndex++;
+                            getNextColGroupDetails = true;
+                            colspan = 0;
+                            HtmlTh thDeepCopy = (HtmlTh) (HtmlTh.create(th));
+                            tr.appendChild(thDeepCopy);
+                            th = new HtmlTh();
+                        } else if (isGreaterThan(colGroupMaxX, headerColMaxX, colHeaderGroupXEpsilon)) {
+                            // span continues beyond this header col
+                            colspan++;
+                        } 
+                    } else {
+                        th.setClassAttribute(CELL_EMPTY);
+                        HtmlTh thDeepCopy = (HtmlTh) (HtmlTh.create(th));
+                        tr.appendChild(thDeepCopy);
+                        th = new HtmlTh();
+                    }
+                }
+                
+                HtmlTr trDeepCopy = (HtmlTr)HtmlTr.create(tr);
+                htmlHead.appendChild(trDeepCopy);
+            }
         }
         
 	private int addHeaderBoxes(HtmlTr tr, SVGElement g, int bodyCols) {
@@ -1008,6 +1075,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
          */
         private HtmlTr wrapSubtableAsRow(HtmlTable subtable, int columnCount) {
             HtmlTr subtableWrapperRow = new HtmlTr();
+            // FIXME Use tbody for this -- simplification
             // Need to add a colspan for main table columns
             // so nested table is displayed across the width of the enclosing table
             HtmlTd subtableWrapperCell = new HtmlTd();
@@ -1033,7 +1101,15 @@ public class TableContentCreator extends PageLayoutAnalyzer {
          * 
          */
         private boolean isGreaterThan(double d1, double d2, double tolerance) {
-            return ((d1 - d2) > tolerance);
+            return (Math.abs(d1 - d2) > tolerance);
+        }
+        
+        /**
+         * Compare coordinates with explicit tolerance
+         * 
+         */
+        private boolean isLessThan(double d1, double d2, double tolerance) {
+            return (Math.abs(d2 - d1) > tolerance);
         }
 
 	// FIXME empty caption
