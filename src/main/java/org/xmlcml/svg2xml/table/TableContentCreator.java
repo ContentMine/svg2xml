@@ -692,7 +692,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                 
                 // Re-structure into subtables
                 HtmlTable transformedTable = createSubtablesFromIndents(table, columnList.size());
-                
+              
                 // If transformed table exists and is basically well formed
                 // then replace the raw set of body rows (containing tds)
                 // Better to use thead tbody tfoot structure?
@@ -940,12 +940,19 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                             // ALIGNED
                             LOG.debug("Obs row: (" + prevMinX + "==" + curMinX + ")");
                             LOG.debug("R:"+irow+"\t"+"[ALIGN]\t\t\t"+"ST?:"+(currentSubtable != null ? "Y" : "N"));
-                            if (curMinX != 0.0) {        
+                            if (curMinX != 0.0) {    
+                                /*
                                 if (!rowIsRightClear(tr)) {
                                     if (tr.getTd(0) != null) {
-                                        tr.getTd(0).setAttribute("data-role", "obslabel");
+                                        HtmlTd td = tr.getTd(0);
+                                        ///tr.getTd(0).setAttribute("data-role", "obslabel");
+                                        HtmlTh th = new HtmlTh();
+                                        th.setValue(td.getValue());
+                                        th.setAttribute(DATA_ATTR_ROLE, ROLE_OBSERVATION_LABEL);
+                                        tr.replaceChild(td, th);
                                     }
                                 }
+                                */
                                 
                                 if (currentSubtable != null) {
                                     addSubtableRow(currentSubtable, prevRow, false);
@@ -1010,7 +1017,11 @@ public class TableContentCreator extends PageLayoutAnalyzer {
             
             if (!rowIsRightClear(topLevelRow)) {
                 if (topLevelRow.getTd(0) != null) {
-                    topLevelRow.getTd(0).setAttribute(DATA_ATTR_ROLE, ROLE_OBSERVATION_LABEL);
+                    HtmlTd td = topLevelRow.getTd(0);
+                    HtmlTh th = new HtmlTh();
+                    th.setAttribute(DATA_ATTR_ROLE, ROLE_OBSERVATION_LABEL);
+                    th.setValue(td.getValue());
+                    topLevelRow.replaceChild(td, th);
                 }
             }
 
@@ -1035,10 +1046,14 @@ public class TableContentCreator extends PageLayoutAnalyzer {
             
             if (!rowIsRightClear(subtableRow)) {
                 if (subtableRow.getTd(0) != null) {
-                    subtableRow.getTd(0).setAttribute(DATA_ATTR_ROLE, ROLE_OBSERVATION_LABEL);
+                    HtmlTd td = subtableRow.getTd(0);
+                    HtmlTh th = new HtmlTh();
+                    th.setAttribute(DATA_ATTR_ROLE, ROLE_OBSERVATION_LABEL);
+                    th.setValue(td.getValue());
+                    subtableRow.replaceChild(td, th);
                 }
             }
-
+            
             // Add a deep-copy of the row to subTable
             HtmlTr trDeepCopy = (HtmlTr) (HtmlTr.create(subtableRow));
             subTable.addRow(trDeepCopy);
