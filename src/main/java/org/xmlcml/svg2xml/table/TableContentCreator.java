@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import nu.xom.Attribute;
+import nu.xom.Elements;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -24,8 +25,10 @@ import org.xmlcml.graphics.svg.SVGShape;
 import org.xmlcml.graphics.svg.SVGTitle;
 import org.xmlcml.html.HtmlBody;
 import org.xmlcml.html.HtmlCaption;
+import org.xmlcml.html.HtmlElement;
 import org.xmlcml.html.HtmlHtml;
 import org.xmlcml.html.HtmlTable;
+import org.xmlcml.html.HtmlTbody;
 import org.xmlcml.html.HtmlTd;
 import org.xmlcml.html.HtmlTh;
 import org.xmlcml.html.HtmlThead;
@@ -693,7 +696,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                 // If transformed table exists and is basically well formed
                 // then replace the raw set of body rows (containing tds)
                 // Better to use thead tbody tfoot structure?
-                if (transformedTable != null && transformedTable.getRows() != null) {
+                if (transformedTable != null && transformedTable.getChildCount() > 0) {
                     // Replace the rows after the header rows
                     // Better to use a tbody and replace that?
                     ArrayList<HtmlTr> currentRows = (ArrayList<HtmlTr>)table.getRows();
@@ -706,8 +709,11 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                         }
                     }
                      
-                    for (HtmlTr stTr : transformedTable.getRows()) {
-                        table.appendChild((HtmlTr)(HtmlTr.create(stTr)));
+                    Elements elts = transformedTable.getChildElements();
+                    if (elts != null && elts.size() > 0) {
+                        for (int i = 0; i < elts.size(); i++) {
+                            table.appendChild(HtmlElement.create(elts.get(i)));
+                        }
                     }
                 }
 	}
@@ -880,7 +886,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                            
                 List<HtmlTr> rows = table.getRows();
                 
-                HtmlTable currentSubtable = null;
+                HtmlTbody currentSubtable = null;
                 restructTable = new HtmlTable();
                 
                 LOG.debug("---");
@@ -910,15 +916,11 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                         curMinX = curRowMinX;
                     }
                     
-                    // Make a copy of the current row reference and 
-                    // store it until its role is determined at the next row
-                    if (irow == 1) {
-                        prevRow = tr;
-                    }
-                    
                     LOG.debug("R:"+irow+"\t"+extractRowLabel(tr));
                     
                     if (curMinX != 0.0) {
+                        boolean isOutDent = isGreaterThan(prevMinX, curMinX, xEpsilon);
+                        LOG.debug("R:"+irow+"\t"+prevMinX+"->"+curMinX+":"+(isOutDent ? "OUTDENT" : "NOT OUTDENT"));
                         if (isGreaterThan(curMinX, prevMinX, xEpsilon)) {
                             // INDENT or FIRST
                             if (prevMinX > 0.0) {
@@ -926,7 +928,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                                 LOG.debug("ST:Indent: ("+prevMinX+"->"+curMinX+")");
                                 LOG.debug("R:"+irow+"\t"+"[IN]\t\t\t"+"ST?:"+(currentSubtable != null ? "Y" : "N"));
                                 
-                                currentSubtable = new HtmlTable();
+                                currentSubtable = new HtmlTbody();
 
                                 // The previous line was subtable heading line
                                 if (irow > 0) {      
@@ -958,14 +960,15 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                             // This is the start of a new section
                             // The previous line is the end of the subtable
                             this.addSubtableRow(currentSubtable, prevRow, false);
-                            List<HtmlTr> stRows = currentSubtable.getRows();
+                            List<HtmlTr> stRows = currentSubtable.getChildTrs();
                             LOG.debug("ST:Complete: ("+prevMinX+"->"+curMinX+"):total rows:"+(stRows != null ? stRows.size() : 0));
                             
                             // Add the completed subtable to the restructured table
-                            HtmlTr subtableWrapperRow = wrapSubtableAsRow(currentSubtable, columnCount);
-                            restructTable.appendChild(subtableWrapperRow);
+                            HtmlTbody subtableDeepCopy = (HtmlTbody)(HtmlTbody.create(currentSubtable));
+                            restructTable.appendChild(subtableDeepCopy);
   
                             currentSubtable = null; 
+                            LOG.debug("------");
                         }
                         
                         // Make a copy of the current row reference and 
@@ -976,16 +979,15 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                     }
                 }
                 
-                // At the end of main table processing 
-                // and allocate final row and
+                // At the end of main table processing: 
+                // allocate final row and
                 // close any final incomplete subtable
                 if (currentSubtable != null) {
                     addSubtableRow(currentSubtable, prevRow, false);
                     
-                    LOG.debug("ST:Complete At Table end: (" + prevMinX + "->" + curMinX + "):total rows:" + currentSubtable);
-                    // Wrap up subtable rows as a row in the transformed table
-                    HtmlTr subtableWrapperRow = wrapSubtableAsRow(currentSubtable, columnCount);
-                    restructTable.appendChild(subtableWrapperRow);
+                    LOG.debug("ST:Complete At Table end: (" + prevMinX + "->" + curMinX + "):total rows:" + currentSubtable.getChildCount());
+                    HtmlTbody subtableDeepCopy = (HtmlTbody)(HtmlTbody.create(currentSubtable));
+                    restructTable.appendChild(subtableDeepCopy);
                 } else {
                     addTopLevelRow(restructTable, prevRow);
                 }
@@ -1016,13 +1018,8 @@ public class TableContentCreator extends PageLayoutAnalyzer {
             HtmlTr trDeepCopy = (HtmlTr) (HtmlTr.create(topLevelRow));
             mainTable.addRow(trDeepCopy);
         }
-
-        /**
-         * Helper method.  
-         * Add top-level row to table.
-         * Top-level rows are observation labels and observation data.
-         */
-        private void addSubtableRow(HtmlTable subTable, HtmlTr subtableRow, boolean isSubtableHeading) {
+        
+        private void addSubtableRow(HtmlTbody subTable, HtmlTr subtableRow, boolean isSubtableHeading) { 
             if (subTable == null) {
                 return;
             }
@@ -1064,31 +1061,6 @@ public class TableContentCreator extends PageLayoutAnalyzer {
         }
               
         /**
-         * The current assumption is that the main table comprises a list of tr only
-         * Wrap the subtable <table> element in a td and tr for compatibility with this.
-         * FIXME Subtables rows should be contained in a tbody instead 
-         * to avoid need for extra tr, td and td colspan=columnCount, with adjustments 
-         * to downstream processing of tables as tr lists
-         * @param subtable
-         * @param columnCount
-         * @return 
-         */
-        private HtmlTr wrapSubtableAsRow(HtmlTable subtable, int columnCount) {
-            HtmlTr subtableWrapperRow = new HtmlTr();
-            // FIXME Use tbody for this -- simplification
-            // Need to add a colspan for main table columns
-            // so nested table is displayed across the width of the enclosing table
-            HtmlTd subtableWrapperCell = new HtmlTd();
-            subtableWrapperCell.addAttribute(new Attribute("colspan", Integer.toString(columnCount)));
-            subtable.setClassAttribute("subtable");
-            subtableWrapperCell.appendChild(subtable);
-            
-            subtableWrapperRow.appendChild(subtableWrapperCell);
-            
-            return subtableWrapperRow;
-        }
-        
-        /**
          * Compare coordinates with explicit tolerance
          * 
          */
@@ -1101,7 +1073,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
          * 
          */
         private boolean isGreaterThan(double d1, double d2, double tolerance) {
-            return (Math.abs(d1 - d2) > tolerance);
+            return (d1 > d2 && (Math.abs(d1 - d2) > tolerance));
         }
         
         /**
@@ -1109,7 +1081,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
          * 
          */
         private boolean isLessThan(double d1, double d2, double tolerance) {
-            return (Math.abs(d2 - d1) > tolerance);
+            return (d2 > d1 && (Math.abs(d2 - d1) > tolerance));
         }
 
 	// FIXME empty caption
