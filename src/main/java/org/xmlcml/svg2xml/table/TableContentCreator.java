@@ -709,30 +709,6 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 		List<SVGG> gs = (g == null) ? new ArrayList<SVGG>() : SVGG.extractSelfAndDescendantGs(g);
 		return gs;
 	}
-        
-        /*
-        private void createRowsAndAddToTable(HtmlTable table, List<List<SVGRect>> columnList, int irow) {
-		HtmlTr tr = new HtmlTr();
-                // FIXME Add rows to a tbody
-		table.appendChild(tr);
-                double tblMinX = 0.0;
-		for (int jcol = 0; jcol < columnList.size(); jcol++) {
-			List<SVGRect> rectjList = columnList.get(jcol);
-			if (irow >= rectjList.size()) {
-				LOG.trace("row index out of range "+irow);;
-			} else {
-				SVGShape rectij = rectjList.get(irow);
-				HtmlTd td = new HtmlTd();
-				tr.appendChild(td);
-				String value = rectij == null ? "/" : rectij.getValue();
-				String value1 = value.substring(value.indexOf("/")+1);
-				td.appendChild(value1);
-				td.setClassAttribute((value1.trim().length() == 0) ? CELL_EMPTY : CELL_FULL);
-                                addLayoutDataAttributes(tr, td, rectij, rectjList, irow);
-			}
-		}
-	}
-        */
 
 	private void createRowsAndAddToTbody(HtmlTbody tbody, List<List<SVGRect>> columnList, int irow) {
 		HtmlTr tr = new HtmlTr();
