@@ -31,6 +31,7 @@ import org.xmlcml.html.HtmlTd;
 import org.xmlcml.html.HtmlTh;
 import org.xmlcml.html.HtmlThead;
 import org.xmlcml.html.HtmlTr;
+import org.xmlcml.html.HtmlElement;
 import org.xmlcml.svg2xml.page.PageLayoutAnalyzer;
 import org.xmlcml.svg2xml.table.TableSection.TableSectionType;
 import org.xmlcml.svg2xml.text.HorizontalElement;
@@ -632,6 +633,15 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                     }
                 }
                 
+                // Allocate any colspan which is unrecorded at the end of the headers
+                // This is the final part of the span
+                if (colspan > 1) {
+                    th.setAttribute(COLSPAN, Integer.toString(colspan));
+
+                    HtmlTh thDeepCopy = (HtmlTh) (HtmlTh.create(th));
+                    tr.appendChild(thDeepCopy);
+                }
+            
                 HtmlTr trDeepCopy = (HtmlTr)HtmlTr.create(tr);
                 htmlHead.appendChild(trDeepCopy);
             }
@@ -692,10 +702,12 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                 for (int irow = 0; irow < allRanges.size(); irow++) {
                     createRowsAndAddToTbody(mainTableTbody, columnList, irow);
                 }
-                
+                               
                 // Re-structure into subtables
                 HtmlTbody restructuredTbody = createSubtablesFromIndents(mainTableTbody, columnList.size());
-              
+                
+                mergeUnwrappedObservationLabels(restructuredTbody);
+                        
                 // If transformed table exists and is basically well formed
                 // then add it as the top-level tbody of the table
                 if (restructuredTbody != null && restructuredTbody.getChildCount() > 0) {
@@ -854,6 +866,28 @@ public class TableContentCreator extends PageLayoutAnalyzer {
             return isRightClear;
         }
         
+        private boolean obsRowIsRightClear(HtmlTr tr) {
+            boolean isRightClear = false;
+            
+            List<HtmlTd> tds = tr.getTdChildren();
+           
+            if (!tds.isEmpty()) {
+                int columnCount = tr.getChildCount();
+                if (tds.size() == columnCount - 1) {
+                    // All value cells (tds) are empty
+                    int jcol = 1;
+                    isRightClear = true;
+                    
+                    while (isRightClear && jcol < tds.size()) {
+                        isRightClear = (isRightClear && tds.get(jcol).getClassAttribute().equals("empty"));
+                        jcol++;
+                    }
+                }
+            }
+            
+            return isRightClear;
+        }
+        
         /**
          * Use layout information in HTML to find subtables using relative x positions
          * across rows.
@@ -927,7 +961,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                             // ALIGNED
                             LOG.debug("Obs row: (" + prevMinX + "==" + curMinX + ")");
                             LOG.debug("R:"+irow+"\t"+"[ALIGN]\t\t\t"+"ST?:"+(currentSubtable != null ? "Y" : "N"));
-                            if (curMinX != 0.0) {    
+                            if (curMinX != 0.0) {  
                                 if (currentSubtable != null) {
                                     addSubtableRow(currentSubtable, prevRow, false);
                                 } else {
@@ -1063,6 +1097,61 @@ public class TableContentCreator extends PageLayoutAnalyzer {
          */
         private boolean isLessThan(double d1, double d2, double tolerance) {
             return (d2 > d1 && (Math.abs(d2 - d1) > tolerance));
+        }
+        
+        /**
+         * Merge unallocated right clears (after subtable identification).
+         *
+         * @param tbody The top-level tbody for the table
+         */
+        private void mergeUnwrappedObservationLabels(HtmlTbody tbody) {
+            if (tbody == null) {
+                return;
+            }
+            
+            // Conceptually a table consists of a list of rowgroups.
+            // These may be true rowgroups (i.e., subtables) (HTML tbody)
+            // or the degenerate case of an individual top-level observation row (HTML tr) 
+            List<HtmlElement> tbodyElts = tbody.getChildElementsList();
+            
+            HtmlElement prevRowGroup = null;
+            double prevRowMinX = 0.0;
+            double curRowMinX = 0.0;
+           
+            for (int i = tbodyElts.size() - 1; i >= 0; i--) {
+                // TODO tr: If n is unlabelled right clear then merge th with n+1 and discard line
+                // TODO tbody: recurse into subtable 
+                HtmlElement curRowGroup = tbodyElts.get(i);
+                
+                if (curRowGroup instanceof HtmlTbody) {
+                    // Handle subtable case
+                    mergeUnwrappedObservationLabels((HtmlTbody)curRowGroup);
+                } else if (curRowGroup instanceof HtmlTr) {
+                    if (i < tbodyElts.size() - 1) {
+                        if (prevRowGroup instanceof HtmlTr) {
+                            if (obsRowIsRightClear((HtmlTr) prevRowGroup)) {
+                                // Only merge lines with the same level of indent
+                                Attribute attr = curRowGroup.getAttribute("data-rowminx");
+                                curRowMinX = Double.parseDouble(attr == null ? "-1.0" : attr.getValue());
+                                if (isEqualTo(curRowMinX, prevRowMinX, xEpsilon)) {
+                                    // Append the text from this row's header onto the 
+                                    // header from the previous row and delete this row
+                                    HtmlTh prevRowHeader = (HtmlTh) prevRowGroup.getChild(0);
+                                    HtmlTh curRowHeader = (HtmlTh) curRowGroup.getChild(0);
+                                    String currentHeaderText = curRowHeader.getValue();
+                                    String mergedHeaderText = currentHeaderText + " " + prevRowHeader.getValue();
+                                    curRowHeader.setValue(mergedHeaderText);
+                                    tbody.removeChild(i + 1);
+                                    LOG.debug("Merge dangling row-header text:row:" + i + "-" + (i + 1) + ":" + mergedHeaderText);
+                                }
+                            }
+                        }
+                    }
+                } 
+                
+                prevRowGroup = curRowGroup;
+                prevRowMinX = curRowMinX;
+            }
         }
 
 	// FIXME empty caption
