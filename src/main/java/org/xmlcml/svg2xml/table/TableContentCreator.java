@@ -4,6 +4,9 @@ import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -51,6 +54,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	
 	public final static Pattern TABLE_N = Pattern.compile("(T[Aa][Bb][Ll][Ee]\\s+\\d+\\.?\\s+(?:\\(cont(inued)?\\.?\\))?\\s*)");
 	private static final Pattern HEADERBOX = Pattern.compile("HEADERBOX: (\\d+)");
+        private static final Pattern COMPOUND_COL_FLOATS = Pattern.compile("([\u2212\\-\\+]?\\d+\\.\\d+)");
                     
         private static final String TABLE_FOOTER = "table.footer";
 	private static final String TABLE_BODY = "table.body";
@@ -85,11 +89,13 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	private TableHeaderSection tableHeaderSection;
 	private TableBodySection tableBodySection;
 	private TableFooterSection tableFooterSection;
+        private HtmlThead tableHtmlThead;
 	private SVGElement annotatedSvgChunk;
+        private boolean tableHasCompoundColumns = false;
 	private double rowDelta = 2.5; //large to manage suscripts
         private final double xEpsilon = 0.1;
         private final double colHeaderGroupXEpsilon = 10; // No smaller value works, especially for finding the end of the spanning header
-        private final DecimalFormat decFormat = new DecimalFormat("0.000");
+        private final DecimalFormat decFormat = new DecimalFormat("0.000");            
 	
 	public TableContentCreator() {
 	}
@@ -509,6 +515,9 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                
                 htmlThead.appendChild(tr);
                 
+                htmlThead.setUTF8Charset(DOT_PNG);
+                
+                this.tableHtmlThead = htmlThead;
                 table.appendChild(htmlThead);
 	}
         
@@ -545,8 +554,6 @@ public class TableContentCreator extends PageLayoutAnalyzer {
         } 
         
         private void addColumnGroups(HtmlThead htmlHead, SVGElement g, SVGElement hdrG, int bodyDelta) { 
-            // TODO consider making use of <colgroup> and <col> elements
-            // within <thead> or main <table>
             List<SVGRect> columnGroupRects = SVGRect.extractSelfAndDescendantRects(g);
             List<List<SVGRect>> cgRows = createColumnGroupRows(columnGroupRects);
             HtmlTr tr;
@@ -702,12 +709,16 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                 for (int irow = 0; irow < allRanges.size(); irow++) {
                     createRowsAndAddToTbody(mainTableTbody, columnList, irow);
                 }
-                               
+                
+                // Split columns with compound content
+                splitCompoundColumnContent(mainTableTbody, columnList.size());
+                 
+                // Content enhancements applied after grid-resolution -- factor out?
                 // Re-structure into subtables
                 HtmlTbody restructuredTbody = createSubtablesFromIndents(mainTableTbody, columnList.size());
                 
                 mergeUnwrappedObservationLabels(restructuredTbody);
-                        
+                
                 // If transformed table exists and is basically well formed
                 // then add it as the top-level tbody of the table
                 if (restructuredTbody != null && restructuredTbody.getChildCount() > 0) {
@@ -1119,8 +1130,8 @@ public class TableContentCreator extends PageLayoutAnalyzer {
             double curRowMinX = 0.0;
            
             for (int i = tbodyElts.size() - 1; i >= 0; i--) {
-                // TODO tr: If n is unlabelled right clear then merge th with n+1 and discard line
-                // TODO tbody: recurse into subtable 
+                // tr: If n is unlabelled right clear then merge th with n+1 and discard line
+                // tbody: recurse into subtable 
                 HtmlElement curRowGroup = tbodyElts.get(i);
                 
                 if (curRowGroup instanceof HtmlTbody) {
@@ -1151,6 +1162,168 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                 
                 prevRowGroup = curRowGroup;
                 prevRowMinX = curRowMinX;
+            }
+        }
+        
+        /**
+         * Determine the number of derived columns for each raw column
+         * resulting from splitting columns to separate all floating point values.
+         * @param tbody The body of the table
+         * @param columnCount The number of columns in the original table grid by layout
+         * @return 
+         */
+        private int[] determineSplitColumnDimensions(HtmlTbody tbody, int columnCount) {
+            // FIXME Record whether table has any compound columns -- avoid unnecessary generation of the supplemental table
+            int[] compoundDimensions = new int[columnCount];
+            Arrays.fill(compoundDimensions, 1);
+            
+            if (tbody != null) {
+                List<HtmlTr> rows = tbody.getChildTrs();
+
+                if (rows != null) {
+                    for (int i = 0; i < rows.size(); i++) {
+                        List<String> cellValues = rows.get(i).getTdCellValues();
+
+                        for (int j = 1; j < cellValues.size(); j++) {
+                            String cellValue = cellValues.get(j);
+                                                                
+                            Matcher m = COMPOUND_COL_FLOATS.matcher(cellValue);
+                            List<String> tokens = new LinkedList<String>();
+                            
+                            while (m.find()) {
+                                String token = m.group(1);
+                                tokens.add(token);
+                            }
+                                
+                            // Find the maximum dimension of the new column set
+                            if (tokens.size() > compoundDimensions[j]) {
+                                tableHasCompoundColumns = true;
+                                compoundDimensions[j] = tokens.size();
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return compoundDimensions;
+        }
+        
+        /**
+         * Find columns containing semantically distinct numerical values combined with standard punctuation.
+         */
+        private void splitCompoundColumnContent(HtmlTbody tbody, int columnCount) {
+            // Search table for columns with multiple numerical content values
+            if (tbody != null) {
+                List<HtmlTr> rows = tbody.getChildTrs();
+
+                if (rows != null) {
+                    int[] compoundDimensions = determineSplitColumnDimensions(tbody, columnCount);
+                    
+                    if (tableHasCompoundColumns) {
+                        // For each cell in the original grid, there is a list of separate values
+                        List<String>[][] newStructure = new ArrayList[columnCount][rows.size()];
+
+                        for (int i = 0; i < rows.size(); i++) {
+                            HtmlTr tr = rows.get(i);
+                            List<String> cellValues = tr.getTdCellValues();
+
+                            for (int j = 1; j < cellValues.size(); j++) {
+                                String cellValue = cellValues.get(j);
+
+                                Matcher m = COMPOUND_COL_FLOATS.matcher(cellValue);
+                                List<String> tokens = new ArrayList<String>(compoundDimensions[j]);
+
+                                while (m.find()) {
+                                    String token = m.group(1);
+                                    tokens.add(token);
+                                }
+
+                                if (tokens.size() > 0) {
+                                    newStructure[j][i] = tokens;
+                                } else {
+                                    newStructure[j][i] = new ArrayList<String>(
+                                            Collections.nCopies(compoundDimensions[j], cellValue));
+                                }
+
+                                // If original column is split, add multiple cells to end of row
+                                if (compoundDimensions[j] > 1) {
+                                    for (String token : newStructure[j][i]) {
+                                        HtmlElement td = HtmlTd.createAndWrapText(token);
+                                        td.addAttribute(new Attribute("data-role", "supp-obs"));
+                                        if (token == null || token.equals("")) {
+                                            td.setClassAttribute("empty");
+                                        } else {
+                                            td.setClassAttribute("cell");
+                                        }
+                                        tr.appendChild(td);
+                                    }
+                                }
+                            }
+                        }
+
+                        // Create new header structures
+                        createSupplementalSplitHeaders(compoundDimensions);
+                    }
+                }
+            }
+        }
+        
+        /**
+         * Create header structure for supplemental split-column table
+         */
+        private void createSupplementalSplitHeaders(int[] compoundDimensions) {
+            HtmlTr directColumnHeaders = (HtmlTr)this.tableHtmlThead.getChild(this.tableHtmlThead.getChildCount() - 1);
+            List<HtmlTh> ths = directColumnHeaders.getThChildren();
+            for (int j = 1; j < compoundDimensions.length; j++) {
+                if (compoundDimensions[j] > 1) {
+                    String headerName = ths.get(j).getValue();
+                    for (int k = 0; k < compoundDimensions[j]; k++) {
+                        // Append additional header cells corresponding to split columns
+                        HtmlTh suppTh = HtmlTh.createAndWrapText(headerName+":"+k);
+                        directColumnHeaders.appendChild(suppTh);
+                    }
+                }
+            }
+            
+            createSupplementalColumnTreeHeaders(compoundDimensions);
+        }
+        
+        private void createSupplementalColumnTreeHeaders(int[] compoundDimensions) {
+            List<HtmlTr> allColumnHeaders = this.tableHtmlThead.getChildTrs();
+            
+            if (allColumnHeaders == null || allColumnHeaders.size() < 2) {
+                return;
+            }
+            
+            // There are supercolumn headers
+            // Adjust the existing colspans
+            for (int i = 0; i < allColumnHeaders.size() - 1; i++) {
+                HtmlTr tr = allColumnHeaders.get(i);
+                List<HtmlTh> ths = tr.getThChildren();
+                int spannedColumnIndex = 0;
+                
+                for (int hj = 0; hj < ths.size(); hj++) {
+                    HtmlTh th = ths.get(hj);
+                    String superHeaderName = th.getValue();
+                    int rawColspan = 1;
+                    int splitColspan = 1;
+                    
+                    String colspanString = th.getAttributeValue(COLSPAN);
+                    if (colspanString != null && !colspanString.isEmpty()) {
+                        rawColspan = (int)Integer.parseInt(colspanString);
+                        spannedColumnIndex += rawColspan;
+                    }
+                    for (int j = 1; j < compoundDimensions[j]; j++) {
+                        splitColspan++;
+                    }
+                    
+                    if (splitColspan > 1) {
+                        // Append additional header cells corresponding to split columns
+                        HtmlTh suppTh = HtmlTh.createAndWrapText(superHeaderName);
+                        suppTh.setAttribute(COLSPAN, Integer.toString(splitColspan));
+                        tr.appendChild(suppTh);
+                    }
+                }
             }
         }
 
