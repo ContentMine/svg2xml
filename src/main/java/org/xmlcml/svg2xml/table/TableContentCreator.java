@@ -570,6 +570,8 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                 tr = new HtmlTr();
                 int cgIndex = 0;
                 int colspan = 0;
+                int colSpanStartCol = 0;
+                int colSpanEndCol = 0;
                 boolean getNextColGroupDetails = false;
                 
                 SVGRect rect = rects.get(cgIndex);
@@ -616,6 +618,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                         if (isEqualTo(colGroupMinX, headerColMinX, colHeaderGroupXEpsilon)) {
                             // This is the start of the span
                             th.appendChild(title.substring(title.indexOf("/") + 1));
+                            colSpanStartCol = i + 1;
                             colspan++;
                         } else if (isEqualTo(colGroupMaxX, headerColMaxX, colHeaderGroupXEpsilon)) {
                             // This is the final part of the span
@@ -624,7 +627,13 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                             }
                             cgIndex++;
                             getNextColGroupDetails = true;
+                            colSpanEndCol = i+1;
                             colspan = 0;
+                            
+                            // Record start and end header columns spanned
+                            th.addAttribute(new Attribute("data-startheadercol", Integer.toString(colSpanStartCol)));
+                            th.addAttribute(new Attribute("data-endheadercol", Integer.toString(colSpanEndCol)));
+
                             HtmlTh thDeepCopy = (HtmlTh) (HtmlTh.create(th));
                             tr.appendChild(thDeepCopy);
                             th = new HtmlTh();
@@ -644,11 +653,11 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                 // This is the final part of the span
                 if (colspan > 1) {
                     th.setAttribute(COLSPAN, Integer.toString(colspan));
-
+                    
                     HtmlTh thDeepCopy = (HtmlTh) (HtmlTh.create(th));
                     tr.appendChild(thDeepCopy);
                 }
-            
+                
                 HtmlTr trDeepCopy = (HtmlTr)HtmlTr.create(tr);
                 htmlHead.appendChild(trDeepCopy);
             }
