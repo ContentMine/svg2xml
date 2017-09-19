@@ -35,6 +35,7 @@ import org.xmlcml.html.HtmlTh;
 import org.xmlcml.html.HtmlThead;
 import org.xmlcml.html.HtmlTr;
 import org.xmlcml.html.HtmlElement;
+import org.xmlcml.html.HtmlHead;
 import org.xmlcml.svg2xml.page.PageLayoutAnalyzer;
 import org.xmlcml.svg2xml.table.TableSection.TableSectionType;
 import org.xmlcml.svg2xml.text.HorizontalElement;
@@ -481,7 +482,12 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 
 	public HtmlHtml createHtmlFromSVG() {
 		HtmlHtml html = new HtmlHtml();
-		HtmlBody body = new HtmlBody();
+		HtmlBody body = new HtmlBody();            
+                // Ensure Unicode -- essential for Firefox
+                HtmlHead htmlHead = new HtmlHead();
+                htmlHead.addUTF8Charset();
+                html.appendChild(htmlHead);
+                
 		html.appendChild(body);
 		HtmlTable table = new HtmlTable();
 		table.setClassAttribute("table");
@@ -514,8 +520,6 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 		}
                
                 htmlThead.appendChild(tr);
-                
-                htmlThead.setUTF8Charset(DOT_PNG);
                 
                 this.tableHtmlThead = htmlThead;
                 table.appendChild(htmlThead);
@@ -627,7 +631,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                             }
                             cgIndex++;
                             getNextColGroupDetails = true;
-                            colSpanEndCol = i+1;
+                            colSpanEndCol = i + 1;
                             colspan = 0;
                             
                             // Record start and end header columns spanned
