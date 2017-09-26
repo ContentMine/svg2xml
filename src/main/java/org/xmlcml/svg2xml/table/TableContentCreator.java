@@ -482,11 +482,9 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 
 	public HtmlHtml createHtmlFromSVG() {
 		HtmlHtml html = new HtmlHtml();
-		HtmlBody body = new HtmlBody();            
-                // Ensure Unicode -- essential for Firefox
-                HtmlHead htmlHead = new HtmlHead();
+		HtmlBody body = new HtmlBody();       
+                HtmlHead htmlHead = html.getOrCreateHead();
                 htmlHead.addUTF8Charset();
-                html.appendChild(htmlHead);
                 
 		html.appendChild(body);
 		HtmlTable table = new HtmlTable();
