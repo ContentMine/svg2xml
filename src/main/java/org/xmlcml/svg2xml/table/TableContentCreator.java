@@ -482,11 +482,11 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 
 	public HtmlHtml createHtmlFromSVG() {
 		HtmlHtml html = new HtmlHtml();
-		HtmlBody body = new HtmlBody();       
+                // Use this API to ensure top-level structures are added
+                // to the output XML tree / HTML DOM
+		HtmlBody body = html.getOrCreateBody();      
                 HtmlHead htmlHead = html.getOrCreateHead();
-                htmlHead.addUTF8Charset();
-                
-		html.appendChild(body);
+                htmlHead.addUTF8Charset();  
 		HtmlTable table = new HtmlTable();
 		table.setClassAttribute("table");
 		body.appendChild(table);
