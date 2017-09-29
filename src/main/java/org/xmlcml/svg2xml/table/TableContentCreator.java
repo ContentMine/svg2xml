@@ -1341,11 +1341,11 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	// FIXME empty caption
 	private void addCaption(SVGElement svgElement, HtmlTable table) {
 		HtmlCaption caption = new HtmlCaption();
-		String captionS = svgElement == null ? null : XMLUtil.getSingleValue(svgElement, ".//*[local-name()='g' and @class='"+TableTitleSection.TITLE_TITLE+"']");
-		if (captionS !=null) {
-			int idx = captionS.indexOf("//");
-			captionS = idx == -1 ? captionS : captionS.substring(idx + 2);
-	//		caption.appendChild(captionS.substring(captionS.indexOf("//")+2));
+		String captionString = svgElement == null ? null : XMLUtil.getSingleValue(svgElement, ".//*[local-name()='g' and @class='"+TableTitleSection.TITLE_TITLE+"']");
+		if (captionString != null) {
+			int idx = captionString.indexOf("//");
+			captionString = idx == -1 ? captionString : captionString.substring(idx + 2);
+			caption.appendChild(captionString);
 			table.appendChild(caption);
 		}
 	}
