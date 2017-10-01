@@ -994,16 +994,21 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                             // curMinX < prevMinX, within tolerance
                             // OUTDENT
                             LOG.debug("R:"+irow+"\t"+"[OUT]\t\t\t"+"ST?:"+(currentSubtable != null ? "Y" : "N"));
-                            // This is the start of a new section
-                            // The previous line is the end of the subtable
-                            this.addSubtableRow(currentSubtable, prevRow, false);
-                            List<HtmlTr> stRows = currentSubtable.getChildTrs();
-                            LOG.debug("ST:Complete: ("+prevMinX+"->"+curMinX+"):total rows:"+(stRows != null ? stRows.size() : 0));
                             
-                            // Add the completed subtable to the restructured table
-                            HtmlTbody subtableDeepCopy = (HtmlTbody)(HtmlTbody.create(currentSubtable));
-                            restructTable.appendChild(subtableDeepCopy);
-  
+                            // Handle case where grid is not well formed upstream and 
+                            // currentSubtable is null  
+                            if (currentSubtable != null) {
+                                // This is the start of a new section
+                                // The previous line is the end of the subtable
+                                this.addSubtableRow(currentSubtable, prevRow, false);
+                                List<HtmlTr> stRows = currentSubtable.getChildTrs();
+                                LOG.debug("ST:Complete: (" + prevMinX + "->" + curMinX + "):total rows:" + (stRows != null ? stRows.size() : 0));
+
+                                // Add the completed subtable to the restructured table
+                                HtmlTbody subtableDeepCopy = (HtmlTbody) (HtmlTbody.create(currentSubtable));
+                                restructTable.appendChild(subtableDeepCopy);
+                            }
+                            
                             currentSubtable = null; 
                             LOG.debug("------");
                         }
@@ -1038,7 +1043,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
          * Add row to tbody (for observation rows at top-level or within subtable) 
          */
         private void addObservationRow(HtmlTbody tbody, HtmlTr observationRow) {
-            if (observationRow == null) {
+            if (observationRow == null || tbody == null) {
                 return;
             }
    
