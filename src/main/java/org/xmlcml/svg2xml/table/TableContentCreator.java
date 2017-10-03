@@ -55,8 +55,8 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	
 	public final static Pattern TABLE_N = Pattern.compile("(T[Aa][Bb][Ll][Ee]\\s+\\d+\\.?\\s+(?:\\(cont(inued)?\\.?\\))?\\s*)");
 	private static final Pattern HEADERBOX = Pattern.compile("HEADERBOX: (\\d+)");
-        private static final Pattern COMPOUND_COL_FLOATS = Pattern.compile("([\u2212\\-\\+]?\\d+\\.\\d+)");
-                    
+        private static final Pattern COMPOUND_COL_NUMS = Pattern.compile("([\u2212\\-\\+]?\\d*\\.?\\d+|[\u2212\\-\\+]?\\d+)");
+        
         private static final String TABLE_FOOTER = "table.footer";
 	private static final String TABLE_BODY = "table.body";
 	private static final String TABLE_HEADER = "table.header";
@@ -1203,7 +1203,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                         for (int j = 1; j < cellValues.size(); j++) {
                             String cellValue = cellValues.get(j);
                                                                 
-                            Matcher m = COMPOUND_COL_FLOATS.matcher(cellValue);
+                            Matcher m = COMPOUND_COL_NUMS.matcher(cellValue);
                             List<String> tokens = new LinkedList<String>();
                             
                             while (m.find()) {
@@ -1246,7 +1246,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                             for (int j = 1; j < cellValues.size(); j++) {
                                 String cellValue = cellValues.get(j);
 
-                                Matcher m = COMPOUND_COL_FLOATS.matcher(cellValue);
+                                Matcher m = COMPOUND_COL_NUMS.matcher(cellValue);
                                 List<String> tokens = new ArrayList<String>(compoundDimensions[j]);
 
                                 while (m.find()) {
@@ -1263,7 +1263,20 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 
                                 // If original column is split, add multiple cells to end of row
                                 if (compoundDimensions[j] > 1) {
-                                    for (String token : newStructure[j][i]) {
+                                   for (int k = 0; k < compoundDimensions[j]; k++) {
+                                        String token = "";
+                                        
+                                        // Handle case where there are fewer values in this column row 
+                                        // than the maximum detected in the column (due to use of column
+                                        // to hold values in different formats, or publisher error/inconsistency)
+                                        if (k > newStructure[j][i].size() - 1) {
+                                            // If there are no more extracted values for this row
+                                            // duplicate first/only value
+                                            token = newStructure[j][i].get(0);
+                                        } else {
+                                            token = newStructure[j][i].get(k);
+                                        }
+                                    
                                         HtmlElement td = HtmlTd.createAndWrapText(token);
                                         td.addAttribute(new Attribute("data-role", "supp-obs"));
                                         if (token == null || token.equals("")) {
