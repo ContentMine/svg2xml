@@ -55,7 +55,10 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	
 	public final static Pattern TABLE_N = Pattern.compile("(T[Aa][Bb][Ll][Ee]\\s+\\d+\\.?\\s+(?:\\(cont(inued)?\\.?\\))?\\s*)");
 	private static final Pattern HEADERBOX = Pattern.compile("HEADERBOX: (\\d+)");
-        private static final Pattern COMPOUND_COL_NUMS = Pattern.compile("([\u2212\\-\\+]?\\d*\\.?\\d+|[\u2212\\-\\+]?\\d+)");
+        /// TEST
+        private static final String MINUS_EQUIVALENTS_STRING = "\u2212\\-";
+        private static final Pattern COMPOUND_COL_NUMS = Pattern.compile("(["+MINUS_EQUIVALENTS_STRING+"\\+]?\\d*\\.?\\d+"+"|"+
+                                                                          "["+MINUS_EQUIVALENTS_STRING+"\\+]?\\d+)");
         
         private static final String TABLE_FOOTER = "table.footer";
 	private static final String TABLE_BODY = "table.body";
@@ -759,8 +762,10 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 				tr.appendChild(td);
 				String value = rectij == null ? "/" : rectij.getValue();
 				String value1 = value.substring(value.indexOf("/")+1);
-				td.appendChild(value1);
-				td.setClassAttribute((value1.trim().length() == 0) ? CELL_EMPTY : CELL_FULL);
+                                // Normalise number prefixes which are semanticly minus signs
+                                String normalisedValue = ValueNormaliser.normaliseNumericalValueString(value1);
+				td.appendChild(normalisedValue);
+				td.setClassAttribute((normalisedValue.trim().length() == 0) ? CELL_EMPTY : CELL_FULL);
                                 addLayoutDataAttributes(tr, td, rectij, rectjList, irow);
 			}
 		}
