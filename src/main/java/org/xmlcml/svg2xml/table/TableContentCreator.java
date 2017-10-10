@@ -691,7 +691,8 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                 // Allocate any colspan which is unrecorded at the end of the headers
                 // This is the final part of the span
                 if (colspan > 1) {
-                    colSpanEndCol = i;
+                    colSpanEndCol = hdrRects.size() - 1;
+                    colSpanStartCol = colSpanEndCol - colspan + 1;
                     th.setAttribute(COLSPAN, Integer.toString(colspan));
                     // Record start and end header columns spanned
                     th.addAttribute(new Attribute(START_HDR_COL, Integer.toString(colSpanStartCol)));
