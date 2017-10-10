@@ -82,7 +82,8 @@ public class TableContentCreator extends PageLayoutAnalyzer {
         private static final String TBL_SEG_SUBTABLE_TITLE = "subtabletitle";
         private static final String COLSPAN = "colspan";
         private static final String SUBTABLE = "subtable";
-        
+        private static final String START_HDR_COL = "data-startheadercol";
+        private static final String END_HDR_COL = "data-endheadercol";
                  
 	private List<HorizontalRuler> rulerList;
 	private List<TableSection> tableSectionList;
@@ -592,7 +593,8 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                     tr.appendChild(thDeepCopy);
                 }
                 
-                for (int i = 0; i < hdrRects.size(); i++) {
+                int i = 0;
+                while (i < hdrRects.size()) {
                     if (cgIndex > rects.size() - 1) {
                         // No more col groups -- fill with empty cells
                         th.setClassAttribute(CELL_EMPTY);
@@ -633,11 +635,15 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                             cgIndex++;
                             getNextColGroupDetails = true;
                             colSpanEndCol = i + 1;
+                            LOG.debug("SPAN complete:"+title);
+                            LOG.debug("START_HDR_COL:"+colSpanStartCol);
+                            LOG.debug("END_HDR_COL:"+colSpanEndCol);
+                            LOG.debug("colspan:"+colspan);
                             colspan = 0;
                             
                             // Record start and end header columns spanned
-                            th.addAttribute(new Attribute("data-startheadercol", Integer.toString(colSpanStartCol)));
-                            th.addAttribute(new Attribute("data-endheadercol", Integer.toString(colSpanEndCol)));
+                            th.addAttribute(new Attribute(START_HDR_COL, Integer.toString(colSpanStartCol)));
+                            th.addAttribute(new Attribute(END_HDR_COL, Integer.toString(colSpanEndCol)));
 
                             HtmlTh thDeepCopy = (HtmlTh) (HtmlTh.create(th));
                             tr.appendChild(thDeepCopy);
@@ -646,18 +652,49 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                             // span continues beyond this header col
                             colspan++;
                         } 
+                        
+                        // Column header / column superheader has been found
+                        i++;
+                    } else if (colspan > 0) {
+                        // There is a span which must be closed
+                        // Close it but do not advance index as
+                        // current header has not been matched to an intersecting heading
+                        if (colspan > 1) {
+                            th.setAttribute(COLSPAN, Integer.toString(colspan));
+                        }
+                        cgIndex++;
+                        getNextColGroupDetails = true;
+                        colSpanEndCol = i;
+                        LOG.debug("SPAN complete:" + title);
+                        LOG.debug("START_HDR_COL:" + colSpanStartCol);
+                        LOG.debug("END_HDR_COL:" + colSpanEndCol);
+                        LOG.debug("colspan:" + colspan);
+                        colspan = 0;
+                            
+                        // Record start and end header columns spanned
+                        th.addAttribute(new Attribute(START_HDR_COL, Integer.toString(colSpanStartCol)));
+                        th.addAttribute(new Attribute(END_HDR_COL, Integer.toString(colSpanEndCol)));
+
+                        HtmlTh thDeepCopy = (HtmlTh) (HtmlTh.create(th));
+                        tr.appendChild(thDeepCopy);
+                        th = new HtmlTh();
                     } else {
                         th.setClassAttribute(CELL_EMPTY);
                         HtmlTh thDeepCopy = (HtmlTh) (HtmlTh.create(th));
                         tr.appendChild(thDeepCopy);
                         th = new HtmlTh();
+                        i++;
                     }
                 }
                 
                 // Allocate any colspan which is unrecorded at the end of the headers
                 // This is the final part of the span
                 if (colspan > 1) {
+                    colSpanEndCol = i;
                     th.setAttribute(COLSPAN, Integer.toString(colspan));
+                    // Record start and end header columns spanned
+                    th.addAttribute(new Attribute(START_HDR_COL, Integer.toString(colSpanStartCol)));
+                    th.addAttribute(new Attribute(END_HDR_COL, Integer.toString(colSpanEndCol)));
                     
                     HtmlTh thDeepCopy = (HtmlTh) (HtmlTh.create(th));
                     tr.appendChild(thDeepCopy);
@@ -1323,45 +1360,92 @@ public class TableContentCreator extends PageLayoutAnalyzer {
         }
         
         private void createSupplementalColumnTreeHeaders(int[] compoundDimensions) {
-            List<HtmlTr> allColumnHeaders = this.tableHtmlThead.getChildTrs();
+            List<HtmlTr> allColumnHeaderRows = this.tableHtmlThead.getChildTrs();
             
-            if (allColumnHeaders == null || allColumnHeaders.size() < 2) {
+            if (allColumnHeaderRows == null || allColumnHeaderRows.size() < 2) {
                 return;
             }
             
-            // There are supercolumn headers
-            // Adjust the existing colspans
-            for (int i = 0; i < allColumnHeaders.size() - 1; i++) {
-                HtmlTr tr = allColumnHeaders.get(i);
+            int totalCellsSpanned = 0;
+            
+            for (int i = 0; i < allColumnHeaderRows.size() - 1; i++) {
+                HtmlTr tr = allColumnHeaderRows.get(i);
                 List<HtmlTh> ths = tr.getThChildren();
-                int spannedColumnIndex = 0;
+                Integer startSpanCol = 0;
+                Integer endSpanCol= 0;
+                Integer endSpanColPrev = 0;
                 
                 for (int hj = 0; hj < ths.size(); hj++) {
                     HtmlTh th = ths.get(hj);
                     String superHeaderName = th.getValue();
-                    int rawColspan = 1;
-                    int splitColspan = 1;
+                    int splitColSpan = 0;
                     
-                    String colspanString = th.getAttributeValue(COLSPAN);
-                    if (colspanString != null && !colspanString.isEmpty()) {
-                        rawColspan = (int)Integer.parseInt(colspanString);
-                        spannedColumnIndex += rawColspan;
-                    }
-                    for (int j = 1; j < compoundDimensions[j]; j++) {
-                        splitColspan++;
-                    }
+                    // Get range of grid columns spanned by this super-header
+                    Attribute startSpanColAttr = th.getAttribute(START_HDR_COL);
+                    Attribute endSpanColAttr = th.getAttribute(END_HDR_COL);
                     
-                    if (splitColspan > 1) {
-                        // Append additional header cells corresponding to split columns
-                        HtmlTh suppTh = HtmlTh.createAndWrapText(superHeaderName);
-                        suppTh.setAttribute(COLSPAN, Integer.toString(splitColspan));
-                        tr.appendChild(suppTh);
+                    if (startSpanColAttr != null && endSpanColAttr != null) {
+                        endSpanColPrev = endSpanCol;
+                        startSpanCol = Integer.parseUnsignedInt(startSpanColAttr.getValue());
+                        endSpanCol = Integer.parseUnsignedInt(endSpanColAttr.getValue());
+                
+                        LOG.debug("Super header col:"+hj+":"+"start:"+startSpanCol+":end:"+endSpanCol);
+                        
+                        // New colspan
+                        boolean spansCompoundColumns = false;
+                        for (int s = startSpanCol; s < endSpanCol + 1; s++) {
+                            LOG.debug("compDim:col:"+s+"="+compoundDimensions[s]);
+                            splitColSpan += (compoundDimensions[s] > 1 ? compoundDimensions[s] : 0);
+                            spansCompoundColumns = spansCompoundColumns || compoundDimensions[s] > 1; 
+                        }
+                        
+                        LOG.debug("New colspan:"+splitColSpan);
+                        if (spansCompoundColumns) {
+                            // Append additional header cells corresponding to split columns
+                            HtmlTh suppTh = HtmlTh.createAndWrapText(superHeaderName);
+                            suppTh.setAttribute(COLSPAN, Integer.toString(splitColSpan));
+                            tr.appendChild(suppTh);
+                            totalCellsSpanned += splitColSpan;
+                        } 
+                    } else {
+                        LOG.debug("Super-column:"+hj+":grid-col range:["+endSpanColPrev+","+startSpanCol+"]");
+                        // Interpolate any empty superheaders needed 
+                        for (int e = endSpanColPrev; e < startSpanCol - 1; e++) {
+                            if (compoundDimensions[e] > 1) {
+                                for (int e1 = 0; e1 < compoundDimensions[e]; e1++) {
+                                    HtmlTh thDeepCopy = (HtmlTh) (HtmlTh.create(th));
+                                    tr.appendChild(thDeepCopy);
+                                    totalCellsSpanned++;
+                                }
+                            } 
+                        }
+                    }
+                }
+                           
+                // Pad the superheader row if necessary
+                if (totalCellsSpanned < compoundDimensions.length) {
+                    int c = endSpanColPrev + 1;
+                    
+                    // Find all remaining compound columns not under superheaders
+                    while (c < compoundDimensions.length) {
+                        if (compoundDimensions[c] > 1) {
+                           for (int pp = 0; pp < compoundDimensions[c]; pp++) {
+                                HtmlTh thEmpty = new HtmlTh();
+                                thEmpty.setClassAttribute(CELL_EMPTY);
+                                tr.appendChild(thEmpty);
+                           }
+                        } 
+                        c++;
                     }
                 }
             }
         }
 
-	// FIXME empty caption
+	/**
+         * Add the table title as the HTML caption element
+         * @param svgElement
+         * @param table 
+         */
 	private void addCaption(SVGElement svgElement, HtmlTable table) {
 		HtmlCaption caption = new HtmlCaption();
 		String captionString = svgElement == null ? null : XMLUtil.getSingleValue(svgElement, ".//*[local-name()='g' and @class='"+TableTitleSection.TITLE_TITLE+"']");
