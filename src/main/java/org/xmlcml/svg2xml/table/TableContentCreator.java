@@ -601,6 +601,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                         HtmlTh thDeepCopy = (HtmlTh) (HtmlTh.create(th));
                         tr.appendChild(thDeepCopy);
                         th = new HtmlTh();
+                        i++;
                         continue;
                     }
                                              
