@@ -100,7 +100,9 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	private double rowDelta = 2.5; //large to manage suscripts
         private final double xEpsilon = 0.1;
         private final double colHeaderGroupXEpsilon = 10; // No smaller value works, especially for finding the end of the spanning header
-        private final DecimalFormat decFormat = new DecimalFormat("0.000");            
+        private final DecimalFormat decFormat = new DecimalFormat("0.000"); 
+        private int headerOffset = 0; // Number of empty cells at start of header rows
+
 	
 	public TableContentCreator() {
 	}
@@ -626,7 +628,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                         if (isEqualTo(colGroupMinX, headerColMinX, colHeaderGroupXEpsilon)) {
                             // This is the start of the span
                             th.appendChild(title.substring(title.indexOf("/") + 1));
-                            colSpanStartCol = i + 1;
+                            colSpanStartCol = i + this.headerOffset;
                             colspan++;
                         } else if (isEqualTo(colGroupMaxX, headerColMaxX, colHeaderGroupXEpsilon)) {
                             // This is the final part of the span
@@ -635,7 +637,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                             }
                             cgIndex++;
                             getNextColGroupDetails = true;
-                            colSpanEndCol = i + 1;
+                            colSpanEndCol = i + this.headerOffset;
                             LOG.debug("SPAN complete:"+title);
                             LOG.debug("START_HDR_COL:"+colSpanStartCol);
                             LOG.debug("END_HDR_COL:"+colSpanEndCol);
@@ -711,6 +713,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 		List<SVGRect> rects = SVGRect.extractSelfAndDescendantRects(g);
 		int headerCols = rects.size();
 		int bodyDelta = bodyCols - headerCols;
+                this.headerOffset = bodyCols - headerCols;
 		LOG.trace("Header boxes: "+headerCols+"; delta: "+bodyDelta);
 		for (int i = 0; i < bodyDelta; i++) {
 			HtmlTh th = new HtmlTh();
