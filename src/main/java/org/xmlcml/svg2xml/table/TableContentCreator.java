@@ -1380,7 +1380,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                 Integer endSpanCol= 0;
                 Integer endSpanColPrev = 0;
                 
-                for (int hj = 0; hj < ths.size(); hj++) {
+                for (int hj = this.headerOffset; hj < ths.size(); hj++) {
                     HtmlTh th = ths.get(hj);
                     String superHeaderName = th.getValue();
                     int splitColSpan = 0;
@@ -1415,7 +1415,14 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                     } else {
                         LOG.debug("Super-column:"+hj+":grid-col range:["+endSpanColPrev+","+startSpanCol+"]");
                         // Interpolate any empty superheaders needed 
-                        for (int e = endSpanColPrev; e < startSpanCol - 1; e++) {
+                        int startPadColHeader = this.headerOffset;
+                        int endPadColHeader = startPadColHeader + 1;
+                        if (endSpanColPrev > this.headerOffset && startSpanCol > endSpanColPrev) {
+                            // This is a gap between supercolumn header spans
+                            startPadColHeader = endSpanColPrev;
+                            endPadColHeader = startSpanCol - 1;
+                        }
+                        for (int e = startPadColHeader; e < endPadColHeader; e++) {
                             if (compoundDimensions[e] > 1) {
                                 for (int e1 = 0; e1 < compoundDimensions[e]; e1++) {
                                     HtmlTh thDeepCopy = (HtmlTh) (HtmlTh.create(th));
