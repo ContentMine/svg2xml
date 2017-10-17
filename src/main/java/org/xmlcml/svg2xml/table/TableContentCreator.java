@@ -723,6 +723,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 			SVGRect rect = rects.get(i);   // messy but has to be rewritten
 			String title = rect.getValue();   // messy but has to be rewritten
 			title = title.replace(" //", "");
+                        title = ValueNormaliser.removeUnusualCharacterTooltip(title);
 			HtmlTh th = new HtmlTh();
 			th.setClassAttribute(CELL_FULL);
                         double cellMinX = rect.getBoundingBox().getXMin();
@@ -806,6 +807,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 				String value1 = value.substring(value.indexOf("/")+1);
                                 // Normalise number prefixes which are semanticly minus signs
                                 String normalisedValue = ValueNormaliser.normaliseNumericalValueString(value1);
+                                normalisedValue = ValueNormaliser.removeUnusualCharacterTooltip(normalisedValue);
 				td.appendChild(normalisedValue);
 				td.setClassAttribute((normalisedValue.trim().length() == 0) ? CELL_EMPTY : CELL_FULL);
                                 addLayoutDataAttributes(tr, td, rectij, rectjList, irow);

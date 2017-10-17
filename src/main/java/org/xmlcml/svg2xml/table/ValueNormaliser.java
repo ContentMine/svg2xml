@@ -1,8 +1,6 @@
 
 package org.xmlcml.svg2xml.table;
 
-import java.util.LinkedList;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -35,6 +33,7 @@ public class ValueNormaliser {
     
     // Use the Unicode regex for Punctuation dash and also \u2212 Unicode minus
     private static final Pattern MINUS_EQUIVALENTS_PREFIX = Pattern.compile("([\\D])([\\p{IsPd}\u2212])([.\\d]?\\d+)");
+    private static final Pattern UNUSUAL_CHAR_TOOLTIP = Pattern.compile("char: \\S+; name: \\S+; f: \\S+; fn: \\S+; e: \\S+");
     
     public static String normaliseNumericalValueString(String cellValueString) { 
         String result = cellValueString;
@@ -59,6 +58,13 @@ public class ValueNormaliser {
         // Handle strings starting with a dash
         result = result.replaceFirst("^\\p{Pd}|\u2212", "-");
         LOG.debug("replaceFirst:"+result);
+        
+        return result;
+    }
+    
+    public static String removeUnusualCharacterTooltip(String inputString) {
+        Matcher m =  UNUSUAL_CHAR_TOOLTIP.matcher(inputString);
+	String result = m.replaceAll("");
         
         return result;
     }
