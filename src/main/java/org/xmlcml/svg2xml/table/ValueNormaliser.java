@@ -33,7 +33,8 @@ public class ValueNormaliser {
     
     // Use the Unicode regex for Punctuation dash and also \u2212 Unicode minus
     private static final Pattern MINUS_EQUIVALENTS_PREFIX = Pattern.compile("([\\D])([\\p{IsPd}\u2212])([.\\d]?\\d+)");
-    private static final Pattern UNUSUAL_CHAR_TOOLTIP = Pattern.compile("char: \\S+; name: \\S+; f: \\S+; fn: \\S+; e: \\S+");
+    private static final Pattern UNUSUAL_CHAR_TOOLTIP = Pattern.compile("char: \\S+; name: \\S+; f: \\S+; fn: \\S+; e: \\S+\\R?");
+    private static final String HTML_UNICODE_UNKNOWN_CHAR_SYMBOL = "\uFFFD";
     
     public static String normaliseNumericalValueString(String cellValueString) { 
         String result = cellValueString;
@@ -63,8 +64,18 @@ public class ValueNormaliser {
     }
     
     public static String removeUnusualCharacterTooltip(String inputString) {
+        if (inputString.isEmpty()) {
+            return inputString;
+        }
+        
         Matcher m =  UNUSUAL_CHAR_TOOLTIP.matcher(inputString);
 	String result = m.replaceAll("");
+        
+        // The character may be a placeholder needed to preserve the layout
+        // so if removing the descriptive text ensure that there is at least one character
+        if (result.isEmpty()) {
+            result = HTML_UNICODE_UNKNOWN_CHAR_SYMBOL;
+        }
         
         return result;
     }
