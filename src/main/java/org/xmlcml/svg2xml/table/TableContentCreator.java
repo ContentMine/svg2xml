@@ -497,11 +497,15 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 		table.setClassAttribute("table");
 		body.appendChild(table);
 		
-		addCaption(annotatedSvgChunk, table);
+		
 		int bodyCols = getGElements(annotatedSvgChunk).size();
-		addHeader(annotatedSvgChunk, table, bodyCols);
-		addBody(annotatedSvgChunk, table);
                 
+                if (bodyCols > 0) {
+                    addCaption(annotatedSvgChunk, table);
+                    addHeader(annotatedSvgChunk, table, bodyCols);
+                    addBody(annotatedSvgChunk, table);
+                }
+               
 		return html;
 	}
 
@@ -1463,12 +1467,12 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	private void addCaption(SVGElement svgElement, HtmlTable table) {
 		HtmlCaption caption = new HtmlCaption();
 		String captionString = svgElement == null ? null : XMLUtil.getSingleValue(svgElement, ".//*[local-name()='g' and @class='"+TableTitleSection.TITLE_TITLE+"']");
-		if (captionString != null) {
-			int idx = captionString.indexOf("//");
-			captionString = idx == -1 ? captionString : captionString.substring(idx + 2);
-			caption.appendChild(captionString);
-			table.appendChild(caption);
-		}
+                if (captionString != null) {
+                       int idx = captionString.indexOf("//");
+                       captionString = idx == -1 ? captionString : captionString.substring(idx + 2);
+                       caption.appendChild(captionString);
+                       table.appendChild(caption);
+                }
 	}
 
 	public SVGElement getAnnotatedSvgChunk() {
