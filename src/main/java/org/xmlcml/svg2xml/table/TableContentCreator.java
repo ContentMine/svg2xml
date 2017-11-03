@@ -84,6 +84,8 @@ public class TableContentCreator extends PageLayoutAnalyzer {
         private static final String SUBTABLE = "subtable";
         private static final String START_HDR_COL = "data-startheadercol";
         private static final String END_HDR_COL = "data-endheadercol";
+        private static final String SUPPLEMENTARY_OBS = "supp-obs";
+        private static final String SUPPLEMENTARY_HEADER = "supp-header";
                  
 	private List<HorizontalRuler> rulerList;
 	private List<TableSection> tableSectionList;
@@ -1331,7 +1333,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                                         }
                                     
                                         HtmlElement td = HtmlTd.createAndWrapText(token);
-                                        td.addAttribute(new Attribute("data-role", "supp-obs"));
+                                        td.addAttribute(new Attribute("data-role", SUPPLEMENTARY_OBS));
                                         if (token == null || token.equals("")) {
                                             td.setClassAttribute("empty");
                                         } else {
@@ -1362,6 +1364,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                     for (int k = 0; k < compoundDimensions[j]; k++) {
                         // Append additional header cells corresponding to split columns
                         HtmlTh suppTh = HtmlTh.createAndWrapText(headerName+":"+k);
+                        suppTh.addAttribute(new Attribute("data-role", SUPPLEMENTARY_HEADER));
                         directColumnHeaders.appendChild(suppTh);
                     }
                 }
@@ -1415,6 +1418,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                             // Append additional header cells corresponding to split columns
                             HtmlTh suppTh = HtmlTh.createAndWrapText(superHeaderName);
                             suppTh.setAttribute(COLSPAN, Integer.toString(splitColSpan));
+                            suppTh.addAttribute(new Attribute("data-role", SUPPLEMENTARY_HEADER));
                             tr.appendChild(suppTh);
                             totalCellsSpanned += splitColSpan;
                         } 
@@ -1450,6 +1454,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                            for (int pp = 0; pp < compoundDimensions[c]; pp++) {
                                 HtmlTh thEmpty = new HtmlTh();
                                 thEmpty.setClassAttribute(CELL_EMPTY);
+                                thEmpty.addAttribute(new Attribute("data-role", SUPPLEMENTARY_HEADER));
                                 tr.appendChild(thEmpty);
                            }
                         } 
