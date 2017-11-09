@@ -644,10 +644,10 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                             cgIndex++;
                             getNextColGroupDetails = true;
                             colSpanEndCol = i + this.headerOffset;
-                            LOG.debug("SPAN complete:"+title);
-                            LOG.debug("START_HDR_COL:"+colSpanStartCol);
-                            LOG.debug("END_HDR_COL:"+colSpanEndCol);
-                            LOG.debug("colspan:"+colspan);
+                            LOG.trace("SPAN complete:"+title);
+                            LOG.trace("START_HDR_COL:"+colSpanStartCol);
+                            LOG.trace("END_HDR_COL:"+colSpanEndCol);
+                            LOG.trace("colspan:"+colspan);
                             colspan = 0;
                             
                             // Record start and end header columns spanned
@@ -674,10 +674,10 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                         cgIndex++;
                         getNextColGroupDetails = true;
                         colSpanEndCol = i;
-                        LOG.debug("SPAN complete:" + title);
-                        LOG.debug("START_HDR_COL:" + colSpanStartCol);
-                        LOG.debug("END_HDR_COL:" + colSpanEndCol);
-                        LOG.debug("colspan:" + colspan);
+                        LOG.trace("SPAN complete:" + title);
+                        LOG.trace("START_HDR_COL:" + colSpanStartCol);
+                        LOG.trace("END_HDR_COL:" + colSpanEndCol);
+                        LOG.trace("colspan:" + colspan);
                         colspan = 0;
                             
                         // Record start and end header columns spanned
@@ -986,7 +986,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                 HtmlTbody currentSubtable = null;
                 restructTable = new HtmlTbody();
                 
-                LOG.debug("---");
+                LOG.trace("---");
                                     
                 for (int irow = 0; irow < rows.size(); irow++) {
                     HtmlTr tr = rows.get(irow);
@@ -1013,31 +1013,31 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                         curMinX = curRowMinX;
                     }
                     
-                    LOG.debug("R:"+irow+"\t"+extractRowLabel(tr));
+                    LOG.trace("R:"+irow+"\t"+extractRowLabel(tr));
                     
                     if (curMinX != 0.0) {
                         boolean isOutDent = isGreaterThan(prevMinX, curMinX, xEpsilon);
-                        LOG.debug("R:"+irow+"\t"+prevMinX+"->"+curMinX+":"+(isOutDent ? "OUTDENT" : "NOT OUTDENT"));
+                        LOG.trace("R:"+irow+"\t"+prevMinX+"->"+curMinX+":"+(isOutDent ? "OUTDENT" : "NOT OUTDENT"));
                         if (isGreaterThan(curMinX, prevMinX, xEpsilon)) {
                             // INDENT or FIRST
                             if (prevMinX > 0.0) {
                                 // This is an indent -- a new subtable has started
-                                LOG.debug("ST:Indent: ("+prevMinX+"->"+curMinX+")");
-                                LOG.debug("R:"+irow+"\t"+"[IN]\t\t\t"+"ST?:"+(currentSubtable != null ? "Y" : "N"));
+                                LOG.trace("ST:Indent: ("+prevMinX+"->"+curMinX+")");
+                                LOG.trace("R:"+irow+"\t"+"[IN]\t\t\t"+"ST?:"+(currentSubtable != null ? "Y" : "N"));
                                 
                                 currentSubtable = new HtmlTbody();
                                 currentSubtable.addAttribute(new Attribute("class", SUBTABLE));
 
                                 // The previous line was subtable heading line
                                 if (irow > 0) {      
-                                    LOG.debug("Add ST header:"+irow+"\t"+extractRowLabel(prevRow));
+                                    LOG.trace("Add ST header:"+irow+"\t"+extractRowLabel(prevRow));
                                     this.addSubtableRow(currentSubtable, prevRow, true);
                                 }
                             } 
                         } else if (isEqualTo(curMinX, prevMinX, xEpsilon)) {
                             // ALIGNED
-                            LOG.debug("Obs row: (" + prevMinX + "==" + curMinX + ")");
-                            LOG.debug("R:"+irow+"\t"+"[ALIGN]\t\t\t"+"ST?:"+(currentSubtable != null ? "Y" : "N"));
+                            LOG.trace("Obs row: (" + prevMinX + "==" + curMinX + ")");
+                            LOG.trace("R:"+irow+"\t"+"[ALIGN]\t\t\t"+"ST?:"+(currentSubtable != null ? "Y" : "N"));
                             if (curMinX != 0.0) {  
                                 if (currentSubtable != null) {
                                     addSubtableRow(currentSubtable, prevRow, false);
@@ -1048,7 +1048,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                         } else { 
                             // curMinX < prevMinX, within tolerance
                             // OUTDENT
-                            LOG.debug("R:"+irow+"\t"+"[OUT]\t\t\t"+"ST?:"+(currentSubtable != null ? "Y" : "N"));
+                            LOG.trace("R:"+irow+"\t"+"[OUT]\t\t\t"+"ST?:"+(currentSubtable != null ? "Y" : "N"));
                             
                             // Handle case where grid is not well formed upstream and 
                             // currentSubtable is null  
@@ -1057,7 +1057,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                                 // The previous line is the end of the subtable
                                 this.addSubtableRow(currentSubtable, prevRow, false);
                                 List<HtmlTr> stRows = currentSubtable.getChildTrs();
-                                LOG.debug("ST:Complete: (" + prevMinX + "->" + curMinX + "):total rows:" + (stRows != null ? stRows.size() : 0));
+                                LOG.trace("ST:Complete: (" + prevMinX + "->" + curMinX + "):total rows:" + (stRows != null ? stRows.size() : 0));
 
                                 // Add the completed subtable to the restructured table
                                 HtmlTbody subtableDeepCopy = (HtmlTbody) (HtmlTbody.create(currentSubtable));
@@ -1065,7 +1065,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                             }
                             
                             currentSubtable = null; 
-                            LOG.debug("------");
+                            LOG.trace("------");
                         }
                         
                         // Make a copy of the current row reference and 
@@ -1082,7 +1082,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                 if (currentSubtable != null) {
                     addSubtableRow(currentSubtable, prevRow, false);
                     
-                    LOG.debug("ST:Complete At Table end: (" + prevMinX + "->" + curMinX + "):total rows:" + currentSubtable.getChildCount());
+                    LOG.trace("ST:Complete At Table end: (" + prevMinX + "->" + curMinX + "):total rows:" + currentSubtable.getChildCount());
                     HtmlTbody subtableDeepCopy = (HtmlTbody)(HtmlTbody.create(currentSubtable));
                     restructTable.appendChild(subtableDeepCopy);
                 } else {
@@ -1121,7 +1121,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
         
         private void addSubtableRow(HtmlTbody tbody, HtmlTr subtableRow, boolean isSubtableHeaderRow) {
             String rowLabel = extractRowLabel(subtableRow);
-            LOG.debug("addSubtableRow: Add ST "+(isSubtableHeaderRow ? "header" : "row" )+":"+rowLabel);
+            LOG.trace("addSubtableRow: Add ST "+(isSubtableHeaderRow ? "header" : "row" )+":"+rowLabel);
             
             if (isSubtableHeaderRow) {
                 subtableRow.setAttribute(DATA_ATTR_TBL_SEG, TBL_SEG_SUBTABLE_TITLE);   
@@ -1224,7 +1224,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                                     String mergedHeaderText = currentHeaderText + " " + prevRowHeader.getValue();
                                     curRowHeader.setValue(mergedHeaderText);
                                     tbody.removeChild(i + 1);
-                                    LOG.debug("Merge dangling row-header text:row:" + i + "-" + (i + 1) + ":" + mergedHeaderText);
+                                    LOG.trace("Merge dangling row-header text:row:" + i + "-" + (i + 1) + ":" + mergedHeaderText);
                                 }
                             }
                         }
@@ -1403,17 +1403,17 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                         startSpanCol = Integer.parseUnsignedInt(startSpanColAttr.getValue());
                         endSpanCol = Integer.parseUnsignedInt(endSpanColAttr.getValue());
                 
-                        LOG.debug("Super header col:"+hj+":"+"start:"+startSpanCol+":end:"+endSpanCol);
+                        LOG.trace("Super header col:"+hj+":"+"start:"+startSpanCol+":end:"+endSpanCol);
                         
                         // New colspan
                         boolean spansCompoundColumns = false;
                         for (int s = startSpanCol; s < endSpanCol + 1; s++) {
-                            LOG.debug("compDim:col:"+s+"="+compoundDimensions[s]);
+                            LOG.trace("compDim:col:"+s+"="+compoundDimensions[s]);
                             splitColSpan += (compoundDimensions[s] > 1 ? compoundDimensions[s] : 0);
                             spansCompoundColumns = spansCompoundColumns || compoundDimensions[s] > 1; 
                         }
                         
-                        LOG.debug("New colspan:"+splitColSpan);
+                        LOG.trace("New colspan:"+splitColSpan);
                         if (spansCompoundColumns) {
                             // Append additional header cells corresponding to split columns
                             HtmlTh suppTh = HtmlTh.createAndWrapText(superHeaderName);
@@ -1423,7 +1423,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                             totalCellsSpanned += splitColSpan;
                         } 
                     } else {
-                        LOG.debug("Super-column:"+hj+":grid-col range:["+endSpanColPrev+","+startSpanCol+"]");
+                        LOG.trace("Super-column:"+hj+":grid-col range:["+endSpanColPrev+","+startSpanCol+"]");
                         // Interpolate any empty superheaders needed 
                         int startPadColHeader = this.headerOffset;
                         int endPadColHeader = startPadColHeader + 1;
