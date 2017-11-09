@@ -45,20 +45,19 @@ public class ValueNormaliser {
         
         while(m.find()) {
             isMatch = true;
-            LOG.debug("Matched prefix minus:"+cellValueString);
+            LOG.trace("Matched prefix minus:"+cellValueString);
             m.appendReplacement(sb, "$1-$3");
         }
         
         m.appendTail(sb);
         
         if (isMatch) {
-            LOG.debug("Transformed:"+sb.toString());
+            LOG.trace("Transformed:"+sb.toString());
         }
         
         result = sb.toString();
         // Handle strings starting with a dash
         result = result.replaceFirst("^\\p{Pd}|\u2212", "-");
-        LOG.debug("replaceFirst:"+result);
         
         return result;
     }
