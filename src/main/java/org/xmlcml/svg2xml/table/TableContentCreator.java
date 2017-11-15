@@ -718,10 +718,9 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	private int addHeaderBoxes(HtmlTr tr, SVGElement g, int bodyCols) {
 		List<SVGRect> rects = SVGRect.extractSelfAndDescendantRects(g);
 		int headerCols = rects.size();
-		int bodyDelta = bodyCols - headerCols;
                 this.headerOffset = bodyCols - headerCols;
-		LOG.trace("Header boxes: "+headerCols+"; delta: "+bodyDelta);
-		for (int i = 0; i < bodyDelta; i++) {
+		LOG.trace("Header boxes: "+headerCols+"; delta: "+this.headerOffset);
+		for (int i = 0; i < this.headerOffset; i++) {
 			HtmlTh th = new HtmlTh();
 			tr.appendChild(th);
 		}
@@ -773,8 +772,10 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                     createRowsAndAddToTbody(mainTableTbody, columnList, irow);
                 }
                 
-                // Split columns with compound content
-                splitCompoundColumnContent(mainTableTbody, columnList.size());
+                if (this.headerOffset >= 0) {
+                    // Split columns with compound content
+                    splitCompoundColumnContent(mainTableTbody, columnList.size());
+                }
                  
                 // Content enhancements applied after grid-resolution -- factor out?
                 // Re-structure into subtables
