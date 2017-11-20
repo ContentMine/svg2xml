@@ -36,6 +36,7 @@ import org.xmlcml.html.HtmlThead;
 import org.xmlcml.html.HtmlTr;
 import org.xmlcml.html.HtmlElement;
 import org.xmlcml.html.HtmlHead;
+import org.xmlcml.html.HtmlTfoot;
 import org.xmlcml.svg2xml.page.PageLayoutAnalyzer;
 import org.xmlcml.svg2xml.table.TableSection.TableSectionType;
 import org.xmlcml.svg2xml.text.HorizontalElement;
@@ -97,6 +98,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	private TableBodySection tableBodySection;
 	private TableFooterSection tableFooterSection;
         private HtmlThead tableHtmlThead;
+        private HtmlTfoot tableHtmlTfoot;
 	private SVGElement annotatedSvgChunk;
         private boolean tableHasCompoundColumns = false;
 	private double rowDelta = 2.5; //large to manage suscripts
@@ -506,6 +508,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                     addCaption(annotatedSvgChunk, table);
                     addHeader(annotatedSvgChunk, table, bodyCols);
                     addBody(annotatedSvgChunk, table);
+                    addFooter(annotatedSvgChunk, table, bodyCols);
                 }
                
 		return html;
@@ -1478,6 +1481,34 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                        captionString = idx == -1 ? captionString : captionString.substring(idx + 2);
                        caption.appendChild(captionString);
                        table.appendChild(caption);
+                }
+	}
+        
+        /**
+         * Add the table footer as the HTML tfoot element
+         * @param svgElement
+         * @param table 
+         */
+	private void addFooter(SVGElement svgElement, HtmlTable table, int bodyCols) {
+		HtmlTfoot htmlTfoot = new HtmlTfoot();
+		String tableFooterString = svgElement == null ? null : XMLUtil.getSingleValue(svgElement, ".//*[local-name()='g' and @class='"+TableFooterSection.FOOTER_TITLE +"']");
+                if (tableFooterString != null) {
+                       int idx = tableFooterString.indexOf("//");
+                       tableFooterString = idx == -1 ? tableFooterString : tableFooterString.substring(idx + 2);
+                       // tfoot is a row group so the content must be wrapped
+                       // as at least one row
+                       HtmlTr tr = new HtmlTr();
+                       HtmlTd td = new HtmlTd();
+                       td.setAttribute(COLSPAN, Integer.toString(bodyCols));
+                       tr.appendChild(td);
+		       td.appendChild(tableFooterString);
+                       htmlTfoot.appendChild(tr);
+                       
+                       this.tableHtmlTfoot = htmlTfoot;
+                       if (this.tableHtmlTfoot != null) {
+                          table.appendChild(this.tableHtmlTfoot);
+                       }
+                       LOG.debug("Adding footer:"+tableFooterString);
                 }
 	}
 
