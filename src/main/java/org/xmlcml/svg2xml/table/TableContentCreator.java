@@ -1492,6 +1492,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	private void addFooter(SVGElement svgElement, HtmlTable table, int bodyCols) {
 		HtmlTfoot htmlTfoot = new HtmlTfoot();
 		String tableFooterString = svgElement == null ? null : XMLUtil.getSingleValue(svgElement, ".//*[local-name()='g' and @class='"+TableFooterSection.FOOTER_TITLE +"']");
+                tableFooterString = ValueNormaliser.removeUnusualCharacterTooltip(tableFooterString);
                 if (tableFooterString != null) {
                        int idx = tableFooterString.indexOf("//");
                        tableFooterString = idx == -1 ? tableFooterString : tableFooterString.substring(idx + 2);
