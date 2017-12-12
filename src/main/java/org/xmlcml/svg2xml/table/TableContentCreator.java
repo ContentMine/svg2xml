@@ -93,6 +93,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	private IntRangeArray rangesArray;
 	private TableTitle tableTitle;
 	private boolean addIndents;
+  private boolean treatIndentsAsSubtables = true;
 	private TableTitleSection tableTitleSection;
 	private TableHeaderSection tableHeaderSection;
 	private TableBodySection tableBodySection;
@@ -782,7 +783,12 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                  
                 // Content enhancements applied after grid-resolution -- factor out?
                 // Re-structure into subtables
-                HtmlTbody restructuredTbody = createSubtablesFromIndents(mainTableTbody, columnList.size());
+                HtmlTbody restructuredTbody = mainTableTbody;
+                
+                
+                if (treatIndentsAsSubtables) {
+                    restructuredTbody = createSubtablesFromIndents(mainTableTbody, columnList.size());
+                }
                 
                 mergeUnwrappedObservationLabels(restructuredTbody);
                 
