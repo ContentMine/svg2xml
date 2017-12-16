@@ -8,7 +8,7 @@
        <!--  upstream -->
        <svghtml.version>1.0.0-SNAPSHOT</svghtml.version>
 
-
+ 
        <!-- remove this from the chain -->
        <!-- 
        <pdf2svg.version>2.2.0-SNAPSHOT</pdf2svg.version>

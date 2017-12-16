@@ -75,7 +75,6 @@ public class PageCropperTest {
 		
 	}
 	
-        @Test
 	public void testPDFJSCrop() {
 		PageCropper cropper = new PageCropper();
 		cropper.setTLBRUserMediaBox(new Real2(0, 800), new Real2(600, 0));
