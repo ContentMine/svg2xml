@@ -128,7 +128,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
     private final double colHeaderGroupXEpsilon = 10; // No smaller value works, especially for finding the end of the spanning header
     private final DecimalFormat decFormat = new DecimalFormat("0.000"); 
     private int headerOffset = 0; // Number of empty cells at start of header rows
-
+    private TextStructurer textStructurer = null;
 	
 	public TableContentCreator() {
 	}
@@ -1550,4 +1550,11 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 		return annotatedSvgChunk;
 	}
 
+    public TextStructurer getOrCreateTextStructurer() {
+        if (this.textStructurer == null) {    
+            this.textStructurer = new TextStructurer();
+        }
+        
+        return this.textStructurer;
+    }
 }

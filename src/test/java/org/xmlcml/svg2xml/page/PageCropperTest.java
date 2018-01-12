@@ -75,4 +75,45 @@ public class PageCropperTest {
 		
 	}
 	
+        @Test
+	public void testPDFJSCrop() {
+		PageCropper cropper = new PageCropper();
+		cropper.setTLBRUserMediaBox(new Real2(0, 800), new Real2(600, 0));
+		Assert.assertEquals("cropToLocalTransformation", 
+			"(1.0,0.0,0.0,\n"
+			+ "0.0,-1.0,800.0,\n"
+			+ "0.0,0.0,1.0,)",
+			cropper.getCropToLocalTransformation().toString());
+		// clip a table - cropping coordinates, 
+                // Coords given by UCL
+		cropper.setTLBRUserCropBox(new Real2(50, 467), new Real2(293, 242));
+		String fileRoot = "PDFjsExampleP1";
+		File inputFile = new File(SVG2XMLFixtures.MISCSVGDIR, fileRoot + ".svg");
+		Assert.assertTrue(""+inputFile+" exists", inputFile.exists());
+		SVGElement svgElement = SVGElement.readAndCreateSVG(inputFile);
+		List<SVGElement> descendants = cropper.extractDescendants(svgElement);
+		///Assert.assertEquals("contained ", 2315, descendants.size());
+		SVGSVG.wrapAndWriteAsSVG(descendants, new File(new File("target/crop/"), fileRoot+".raw.svg"));
+		List<SVGElement> contained = cropper.extractContainedElements(descendants);
+		///Assert.assertEquals("contained ", 995, contained.size());
+		SVGSVG.wrapAndWriteAsSVG(contained, new File(new File("target/crop/"), fileRoot+".crop.svg"));
+	}
+        
+        @Test
+	public void testPDFjsCropToElement() throws Exception {
+		String fileroot = "PDFjsExampleP1";
+		File inputFile = new File(SVG2XMLFixtures.MISCSVGDIR, fileroot + ".svg");
+		
+		PageCropper cropper = new PageCropper();
+		cropper.readSVG(inputFile);
+                // From UCL example input data
+		cropper.setTLBRUserMediaBox(new Real2(0, 800), new Real2(600, 0));
+                // From other test methods -- FIXME
+                cropper.setTLBRUserCropBox(new Real2(50, 467), new Real2(293, 242));
+		// just for display
+		cropper.displayCropBox(new File(new File("target/crop/"), fileroot + ".raw.box.svg"));
+		cropper.detachElementsOutsideBox();
+		///Assert.assertEquals("contained ", 992, cropper.extractDescendants(cropper.getSVGElement()).size());
+		SVGSVG.wrapAndWriteAsSVG(cropper.getSVGElement(), new File(new File("target/crop/"), fileroot + ".crop2.svg"));
+	}
 }

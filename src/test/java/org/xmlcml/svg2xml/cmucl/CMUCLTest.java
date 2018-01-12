@@ -296,7 +296,7 @@ public class CMUCLTest {
 	 * 
 	 */
 	@Test
-//	@Ignore // LONG
+	@Ignore // Missing resources and // LONG
 	public void testCreateSVGFromPDF() throws IOException {
 		File pdfOrigDir = new File(CM_UCL_DIR, "corpus-oa");
 		File pmrDir = new File(CM_UCL_DIR, "corpus-oa-pmr");
