@@ -1,6 +1,7 @@
 package org.xmlcml.svg2xml.table;
 
 import java.io.File;
+
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +18,6 @@ import org.xmlcml.graphics.html.HtmlHead;
 import org.xmlcml.graphics.html.HtmlP;
 import org.xmlcml.graphics.html.HtmlTable;
 import org.xmlcml.graphics.html.HtmlTh;
-import org.xmlcml.graphics.svg.SVGElement;
 import org.xmlcml.graphics.svg.SVGElement;
 import org.xmlcml.graphics.svg.SVGShape;
 import org.xmlcml.graphics.svg.SVGText;
