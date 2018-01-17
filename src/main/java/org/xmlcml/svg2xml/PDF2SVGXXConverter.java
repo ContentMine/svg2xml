@@ -1,7 +1,6 @@
 package org.xmlcml.svg2xml;
 
 import java.io.File;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,6 +27,7 @@ public class PDF2SVGXXConverter {
 
 	public void run(String ...string) {
 		LOG.warn("PDFConverter.run() shorted out");
+//		PDF2SVGConverter converter = new PDF2SVGConverter();
 	}
 
 	public List<SVGSVG> getPageList() {

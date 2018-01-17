@@ -6,7 +6,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.xmlcml.svg2xml.SVG2XMLFixtures;
 
-public class PDFAnalyzerTest {
+public class PDFAnalyzerTestOLD {
 
 	@Test
 	public void Dummy() {

@@ -515,17 +515,6 @@ public class TableStructurerTest {
 		testSuscripts(inputFile, superscript, subscript);
 	}
 
-	@Test
-	public void testJoinTables() {
-		// 1092 - Table 4
-		String root = "els_1092";
-		File outDir = new File(TABLE_OUT_DIR, root+"/");
-		File pdfIn = new File(SVG2XMLFixtures.TABLE_PDF_DIR, root+".pdf");
-		outDir.mkdirs();
-		String[] args = {"-outdir", outDir.toString(), pdfIn.toString()};
-		PDFAnalyzer.main(args);
-
-	}
 	
 	// ----------------------
 	@Test

@@ -6,35 +6,25 @@
 
     <properties>
        <!--  upstream -->
-       <svghtml.version>1.0.0-SNAPSHOT</svghtml.version>
+       <!-- <svghtml.version>1.0.0-SNAPSHOT</svghtml.version> --> <!-- not used -->
 
- 
-       <!-- remove this from the chain -->
-       <!-- 
-       <pdf2svg.version>2.2.0-SNAPSHOT</pdf2svg.version>
-       -->
-<!-- no longer use pdf2svg in the link chain; everything in svg -->
-       <!-- the later version with PDFBox 2.0.6 -->
-<!--        <pdf2svg.version>2.3.0-SNAPSHOT</pdf2svg.version> -->
-<!-- do not use HTML in link either -->
-<!--
-       <html.version>2.2.0-SNAPSHOT</html.version>
--->
- 			<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+       <pdf2svg.version>2.4.0-SNAPSHOT</pdf2svg.version>
+       
     </properties>
 
-    <groupId>org.contentmine</groupId>
+    <groupId>org.xmlcml</groupId>
     <artifactId>svg2xml</artifactId>
     <version>2.4.0-SNAPSHOT</version>
     <description>Takes SVG from PDF2SVG and analyzes the domain-independent semantics</description>
 
     <dependencies>
-		<!-- uses new combined library -->
+		<!-- uses new combined library through pdf2svg -->
         <dependency>
-            <groupId>org.contentmine</groupId>
-            <artifactId>svghtml</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <groupId>org.xmlcml</groupId>
+            <artifactId>pdf2svg</artifactId>
+            <version>${pdf2svg.version}</version>
         </dependency>
+        <!-- org.xmlcml:pdf2svg:jar:2.4.0-SNAPSHOT -->
     </dependencies>
 
 
