@@ -1,16 +1,19 @@
 package org.xmlcml.svg2xml.page;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.List;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.xmlcml.euclid.Real2;
 import org.xmlcml.graphics.svg.SVGElement;
 import org.xmlcml.graphics.svg.SVGSVG;
 import org.xmlcml.svg2xml.SVG2XMLFixtures;
+import org.xmlcml.svg2xml.page.PageCropper.Units;
 
 /** tests cropping of pages
  * 
@@ -114,5 +117,29 @@ public class PageCropperTest {
 		cropper.detachElementsOutsideBox();
 		///Assert.assertEquals("contained ", 992, cropper.extractDescendants(cropper.getSVGElement()).size());
 		SVGSVG.wrapAndWriteAsSVG(cropper.getSVGElement(), new File(new File("target/crop/"), fileroot + ".crop2.svg"));
+	}
+
+	@Test
+	@Ignore
+	public void testCroppingUnits() throws FileNotFoundException {
+
+		/**
+		 * initial units are mm and resolution is 72 dpi (72 pixels?)
+		{page: 1, top: 25.9, left: 97.8, width: 15.0, height: 8.5},  transforms to
+		(277, 727) (320, 703)  'Type'
+		
+		{page: 1, top: 117.3, left: 17.6, width: 85.6, height: 79.5} transforms to
+		(50, 467) (293, 242)   [abstract]
+		*/
+		PageCropper pageCropper = new PageCropper();
+		String fileroot = "materials-05-00027-page7";
+		File inputFile = new File(SVG2XMLFixtures.MDPI_DIR, fileroot + ".svg");
+		
+		PageCropper cropper = new PageCropper();
+		cropper.readSVG(inputFile);
+		cropper.setTLBRUserMediaBox(new Real2(0, 800), new Real2(600, 0));
+		SVGElement svgElement = cropper.cropElementTLBR(new Real2(30, 580), new Real2(570, 320), Units.PX);
+		SVGSVG.wrapAndWriteAsSVG(svgElement, new File(new File("target/crop/bio/"), fileroot + ".cropUnits.svg"));
+
 	}
 }
