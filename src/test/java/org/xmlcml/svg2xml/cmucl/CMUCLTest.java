@@ -43,7 +43,7 @@ import org.xmlcml.graphics.svg.SVGSVG;
 import org.xmlcml.graphics.svg.SVGShape;
 import org.xmlcml.graphics.svg.SVGUtil;
 import org.xmlcml.graphics.svg.linestuff.Path2ShapeConverter;
-import org.xmlcml.svg2xml.PDF2SVGXXConverter;
+import org.xmlcml.svg2xml.PDF2SVGConverterWrapper;
 import org.xmlcml.svg2xml.SVG2XMLFixtures;
 import org.xmlcml.svg2xml.table.TableContentCreator;
 import org.xmlcml.xml.XMLUtil;
@@ -301,7 +301,7 @@ public class CMUCLTest {
 	public void testCreateSVGFromPDF() throws IOException {
 		File pdfOrigDir = new File(CM_UCL_DIR, "corpus-oa");
 		File pmrDir = new File(CM_UCL_DIR, "corpus-oa-pmr");
-		PDF2SVGXXConverter pdf2svgConverter = new PDF2SVGXXConverter();
+		PDF2SVGConverterWrapper pdf2svgConverter = new PDF2SVGConverterWrapper();
 		pdf2svgConverter.createSVGFromPDF(pdfOrigDir, pmrDir);
 	}
 

@@ -27,6 +27,7 @@ import org.xmlcml.graphics.svg.SVGSVG;
 import org.xmlcml.graphics.svg.SVGText;
 import org.xmlcml.graphics.svg.cache.ComponentCache;
 import org.xmlcml.svg2xml.SVG2XMLFixtures;
+import org.xmlcml.svg2xml.util.SVGFilenameUtils;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultiset;
@@ -86,7 +87,7 @@ public class FilledTableAnalyzerTest {
 		ComponentCache svgStore = new ComponentCache();
 		svgStore.readGraphicsComponents(svgFile);
 		SVGElement svgElement = (SVGElement) svgStore.getExtractedSVGElement();
-		File svgOutFile = SVG2XMLFixtures.getCompactSVGFile(new File("target/"+FILLED), new File("target/"+FILLED+"/"+svgFile.getPath()+"micro"));
+		File svgOutFile = SVGFilenameUtils.getCompactSVGFilename(new File("target/"+FILLED), new File("target/"+FILLED+"/"+svgFile.getPath()+"micro"));
 		SVGSVG.wrapAndWriteAsSVG(svgElement, svgOutFile, 1000., 1000.);
 	}
 

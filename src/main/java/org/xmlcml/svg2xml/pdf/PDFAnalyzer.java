@@ -21,7 +21,7 @@ import org.apache.log4j.Logger;
 import org.xmlcml.graphics.html.HtmlDiv;
 import org.xmlcml.graphics.html.HtmlElement;
 import org.xmlcml.graphics.svg.SVGSVG;
-import org.xmlcml.svg2xml.PDF2SVGXXConverter;
+import org.xmlcml.svg2xml.PDF2SVGConverterWrapper;
 import org.xmlcml.svg2xml.page.PageAnalyzer;
 import org.xmlcml.svg2xml.util.SVG2XMLConstantsX;
 
@@ -177,7 +177,7 @@ public class PDFAnalyzer {
 	private void analyzePDF() {
 		ensurePDFIndex();
 		createSVGFilesfromPDF();
-		LOG.trace("*** created SVG");
+		LOG.debug("*** created SVG");
 		if (pdfIo.isSkipOutput()) {
 			LOG.trace("Skipped Output: "+pdfIo.outputDocumentDir);
 		} else {
@@ -263,7 +263,7 @@ public class PDFAnalyzer {
 
 	public void createSVGFilesfromPDF() {
 		LOG.trace("createSVG");
-		PDF2SVGXXConverter converter = new PDF2SVGXXConverter();
+		PDF2SVGConverterWrapper converter = new PDF2SVGConverterWrapper();
 		File inFile = pdfIo.getInFile();
 		String inputName = pdfIo.getInputName();
 		if (inFile != null && inFile.exists()) {
@@ -276,13 +276,13 @@ public class PDFAnalyzer {
 		}
 	}
 
-	public void createSVGFilesfromPDF(PDF2SVGXXConverter converter, String inputName) {
-		if (false && true) LOG.debug("PDF2SVGConverter skipped");
+	public void createSVGFilesfromPDF(PDF2SVGConverterWrapper converter, String inputName) {
 		File svgDocumentDir = pdfIo.getRawSVGDirectory();
 		File[] files = (svgDocumentDir == null ? null : svgDocumentDir.listFiles());
 		if (!svgDocumentDir.exists() || files == null || files.length == 0) {
 			svgDocumentDir.mkdirs();
 			LOG.trace("running "+inputName+" to "+svgDocumentDir.toString());
+			// only sets outdir
 			converter.run("-outdir", svgDocumentDir.toString(), inputName );
 		} else {
 			LOG.trace("Skipping SVG because files in ("+svgDocumentDir+") already exist: "+files.length);

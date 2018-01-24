@@ -7,7 +7,7 @@ import java.util.List;
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.xmlcml.svg2xml.pdf.PDFAnalyzerTestOLD;
+import org.xmlcml.svg2xml.pdf.PDFAnalyzerTest;
 
 public class Prototypes {
 	private static final Logger LOG = Logger.getLogger(Prototypes.class);
@@ -27,13 +27,13 @@ public class Prototypes {
 //		new PDF2SVGConverter().run("-logger", "-infofiles", "-logglyphs", "-outdir", "target/phytochem", "src/test/resources/elsevier/carnosic.pdf"
 //		new SVG2XMLConverter().run("-logger", "-infofiles", "-logglyphs", "-outdir", "target/phytochem", "src/test/resources/elsevier/carnosic.pdf"
 //		PDFAnalyzerTest.analyzePDF("src/test/resources/pdfs/els/1-s2.0-S105579031300//		PDFAnalyzerTest.analyzePDF("demos/clinical/1917-main.pdf");
-		PDFAnalyzerTestOLD.analyzePDF("src/test/resources/pdfs/els/carnosic.pdf");
+		PDFAnalyzerTest.analyzePDF("src/test/resources/pdfs/els/carnosic.pdf");
 	
 	}
 	
 	private static void funnel() {
 //		new PDF2SVGConverter().run("-logger", "-infofiles", "-logglyphs", "-outdir", "target/funnel", "../pdf2svg/demos/sage/Sbarra-454-74.pdf");
-		PDFAnalyzerTestOLD.analyzePDF("../pdf2svg/demos/sage/Sbarra-454-74.pdf");
+		PDFAnalyzerTest.analyzePDF("../pdf2svg/demos/sage/Sbarra-454-74.pdf");
 	
 	}
 
@@ -41,14 +41,14 @@ public class Prototypes {
 		File uclDir = new File(SVG2XMLFixtures.TABLE_PDF_DIR, "fala/fala25/");
 		List<File> pdfFiles = new ArrayList<File>(FileUtils.listFiles(uclDir, new String[]{"pdf"}, true));
 		for (File pdfFile : pdfFiles) {
-			PDFAnalyzerTestOLD.analyzePDF(pdfFile.toString());
+			PDFAnalyzerTest.analyzePDF(pdfFile.toString());
 		}
 	
 	}
 
 	private static void clinical() {
 //		new PDF2SVGConverter().run("-logger", "-infofiles", "-logglyphs", "-outdir", "target/funnel", "../pdf2svg/demos/sage/Sbarra-454-74.pdf");
-		PDFAnalyzerTestOLD.analyzePDF("demos/clinical/ACR65481.pdf");
+		PDFAnalyzerTest.analyzePDF("demos/clinical/ACR65481.pdf");
 //		PDFAnalyzerTest.analyzePDF("demos/clinical/ADA_PH1.pdf");
 //		PDFAnalyzerTest.analyzePDF("demos/clinical/AHA_PH2.pdf");
 //		PDFAnalyzerTest.analyzePDF("demos/clinical/AMA_Dobson2013_1.pdf");  // has vectors
@@ -74,7 +74,7 @@ public class Prototypes {
 	}
 
 	private static void stats() {
-		PDFAnalyzerTestOLD.analyzePDF("demos/stats/AA_Kranke2000.pdf");
+		PDFAnalyzerTest.analyzePDF("demos/stats/AA_Kranke2000.pdf");
 //		PDFAnalyzerTest.analyzePDF("demos/stats/APA_Nuijten2015.pdf");
 //		PDFAnalyzerTest.analyzePDF("demos/stats/ELSS0022103115300123.pdf");
 //		PDFAnalyzerTest.analyzePDF("demos/stats/MJA_Nath2006.pdf");

@@ -2,11 +2,10 @@ package org.xmlcml.svg2xml.pdf;
 
 import java.io.File;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import org.xmlcml.svg2xml.SVG2XMLFixtures;
 
-public class PDFAnalyzerTestOLD {
+public class PDFAnalyzerTest {
 
 	@Test
 	public void Dummy() {
@@ -18,7 +17,6 @@ public class PDFAnalyzerTestOLD {
 		PDFAnalyzer analyzer = new PDFAnalyzer();
 		analyzer.analyzePDFFile(SVG2XMLFixtures.MULTIPLE312_PDF);
 	}
-
 
 	/** this is better with PDFAnalyzer.main(String[] )
 	 * 

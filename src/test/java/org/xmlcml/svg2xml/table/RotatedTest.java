@@ -19,6 +19,7 @@ import org.xmlcml.graphics.svg.SVGG;
 import org.xmlcml.graphics.svg.SVGSVG;
 import org.xmlcml.graphics.svg.SVGText;
 import org.xmlcml.svg2xml.SVG2XMLFixtures;
+import org.xmlcml.svg2xml.util.SVGFilenameUtils;
 
 public class RotatedTest {
 	private static final Logger LOG = Logger.getLogger(RotatedTest.class);
@@ -94,7 +95,7 @@ public class RotatedTest {
 				text1.rotateTextAboutPoint(centre, t90);
 				g.appendChild(text1);
 			}
-			SVGSVG.wrapAndWriteAsSVG(g, SVG2XMLFixtures.getCompactSVGFile(new File("target/rotate"), svgFile), 1000., 1000.);
+			SVGSVG.wrapAndWriteAsSVG(g, SVGFilenameUtils.getCompactSVGFilename(new File("target/rotate"), svgFile), 1000., 1000.);
 		}
 		
 	}

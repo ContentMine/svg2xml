@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.junit.Assert;
 import org.junit.Test;
 import org.xmlcml.euclid.Real2Range;
 import org.xmlcml.euclid.RealArray;
@@ -23,11 +24,10 @@ import org.xmlcml.graphics.svg.cache.ComponentCache;
 import org.xmlcml.graphics.svg.linestuff.LineMerger;
 import org.xmlcml.graphics.svg.linestuff.LineMerger.MergeMethod;
 import org.xmlcml.svg2xml.SVG2XMLFixtures;
+import org.xmlcml.svg2xml.util.SVGFilenameUtils;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
-
-import org.junit.Assert;
 
 public class RuledTest {
 	private static final Logger LOG = Logger.getLogger(RuledTest.class);
@@ -94,7 +94,7 @@ public class RuledTest {
 		Assert.assertEquals("lengths", "[146.852, 146.853, 408.941 x 16, 409.205]",  lengthSet.toString());
 		List<Multiset.Entry<Double>> widthSet = MultisetUtil.createDoubleListSortedByValue(widthArray.createDoubleMultiset(3));
 		Assert.assertEquals("widths", "[0.093 x 14, 0.234 x 4, 0.469]",  widthSet.toString());
-		File svgOutFile = SVG2XMLFixtures.getCompactSVGFile(new File("target/"+RULED), new File("target/"+RULED+"/"+svgFile.getPath()+"micro"));
+		File svgOutFile = SVGFilenameUtils.getCompactSVGFilename(new File("target/"+RULED), new File("target/"+RULED+"/"+svgFile.getPath()+"micro"));
 		SVGSVG.wrapAndWriteAsSVG(svgElement, svgOutFile, 1000., 1000.);
 	}
 	/** test joining lines

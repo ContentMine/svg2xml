@@ -324,21 +324,6 @@ public class SVG2XMLFixtures {
 		return svgElement;
 	}
 	
-	/** 
-	 * Page numbered from ONE
-	 * 
-	 * @param file
-	 * @param page
-	 * @return
-	 */
-	public static SVGSVG getSVGPageFromPDF(File file, int page) {
-		PDF2SVGXXConverter converter = new PDF2SVGXXConverter();
-		converter.run("-outdir target "+file);
-		LOG.warn("PDF2SVGConverter shorted out");
-		SVGSVG svgPage = (page < 1 || page > converter.getPageList().size() ? null : converter.getPageList().get(page - 1));
-		return svgPage;
-	}
-	
 	public static SVGSVG createSVGPage(File svgFile) {
 		SVGSVG svgPage = null;
 		try {
@@ -347,26 +332,6 @@ public class SVG2XMLFixtures {
 			throw new RuntimeException("Cannot create SVG: ", e);
 		}
 		return svgPage;
-	}
-
-
-//	public static List<Chunk> createLeafChunks(File pdfFile, int pageNum) {
-//		SVGSVG svgPage = createChunkedSVGPage(pdfFile, pageNum);
-//		List<Chunk> chunkList = Chunk.extractChunks(SVGUtil.getQuerySVGElements(svgPage, ".//svg:g[@LEAF]"));
-//		return chunkList;
-//	}
-
-	/** compacts a filename tracking tables or figures hierarchy
-	 * 
-	 * @param root
-	 * @param file
-	 * @return
-	 */
-	public static File getCompactSVGFile(File root, File file) {
-		File parent = file.getParentFile();
-		File ggParent = parent.getParentFile().getParentFile();
-		return new File(new File(root, ggParent.getName()), parent.getName()+".svg");
-		
 	}
 
 
