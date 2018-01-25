@@ -316,8 +316,13 @@ public class PageCropper {
 		return svgElement;
 	}
 
-	public void setSVGElement(SVGElement svgElement) {
-		this.svgElement = svgElement;
+	/** make copy of svgElement.
+	 * 
+	 * @param svgElement
+	 */
+	public void setSVGElementCopy(SVGElement svgElement) {
+		this.svgElement = (SVGElement) svgElement.copy();
+		LOG.debug(this.svgElement);
 	}
 
 	public SVGElement cropElementTLBR(Real2 tl, double width, double height, Units userUnits) {
@@ -355,6 +360,12 @@ public class PageCropper {
 		sb.append("MediaBox: "+String.valueOf(mediaBoxProcessor)+"\n");
 		return sb.toString();
 		
+	}
+
+	public void setTLBRUserCropBox(Real2Range bbox) {
+		Real2 tl = new Real2(bbox.getXMin(), bbox.getYMin());
+		Real2 br = new Real2(bbox.getXMax(), bbox.getYMax());
+		setTLBRUserCropBox(tl, br);
 	}
 	
 

@@ -46,6 +46,9 @@ public class BoxProcessor {
 	private boolean ydown = true;
 	private static Double YMAX = 800.; // horrible kludge until we get coords sorted
 
+	public BoxProcessor() {
+		return;
+	}
 	public void parseArguments(List<String> args) {
 		int i = 0;
 		for (; i < args.size(); ) {
@@ -88,7 +91,7 @@ public class BoxProcessor {
 			throw new RuntimeException("must give x0 and y0");
 		}
 		if (x1 != null) {
-			// ignore width
+			width = (xright) ? x1 - x0 : x0 - x1; // X takes precedence over width
 		} else {
 			if (width == null) {
 				throw new RuntimeException("must give x1 or width");
@@ -96,7 +99,7 @@ public class BoxProcessor {
 			x1 = (xright) ? x0 + width : x0 - width;
 		}
 		if (y1 != null) {
-			// ignore height
+			height = (ydown) ? y0 - y1 : y1 - y0; // Y takes precedence over height
 		} else {
 			if (height == null) {
 				throw new RuntimeException("must give y1 or height");
@@ -107,9 +110,9 @@ public class BoxProcessor {
 	}
 	
 	private void applyUnits() {
-		if (Units.PX.equals(units)) {
-			// do nothing
-		} else {
+//		if (Units.PX.equals(units)) {
+//			// do nothing
+//		} else {
 			double user2Px = units.getUser2Px();
 			x0out = x0 * user2Px;
 			x1out = x1 * user2Px;
@@ -123,7 +126,7 @@ public class BoxProcessor {
 			}
 			unitsOut = Units.PX;
 			LOG.trace(this.toString());
-		}
+//		}
 	}
 
 	public String toString() {
