@@ -114,7 +114,8 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	private IntRangeArray rangesArray;
 	private TableTitle tableTitle;
 	private boolean addIndents;
-    private boolean treatIndentsAsSubtables = true;
+        private boolean treatIndentsAsSubtables = true;
+        private boolean splitCompoundNumericalColumns = true;
 	private TableTitleSection tableTitleSection;
 	private TableHeaderSection tableHeaderSection;
 	private TableBodySection tableBodySection;
@@ -128,7 +129,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
     private final double colHeaderGroupXEpsilon = 10; // No smaller value works, especially for finding the end of the spanning header
     private final DecimalFormat decFormat = new DecimalFormat("0.000"); 
     private int headerOffset = 0; // Number of empty cells at start of header rows
-    private TextStructurer textStructurer = null;
+
 	
 	public TableContentCreator() {
 	}
@@ -803,9 +804,11 @@ public class TableContentCreator extends PageLayoutAnalyzer {
                     createRowsAndAddToTbody(mainTableTbody, columnList, irow);
                 }
                 
-                if (this.headerOffset >= 0) {
-                    // Split columns with compound content
-                    splitCompoundColumnContent(mainTableTbody, columnList.size());
+                if (this.splitCompoundNumericalColumns) {
+                    if (this.headerOffset >= 0) {
+                        // Split columns with compound content
+                        splitCompoundColumnContent(mainTableTbody, columnList.size());
+                    }
                 }
                  
                 // Content enhancements applied after grid-resolution -- factor out?
@@ -848,8 +851,9 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 				tr.appendChild(td);
 				String value = rectij == null ? "/" : rectij.getValue();
 				String value1 = value.substring(value.indexOf("/")+1);
+                                String normalisedValue = value1;
                                 // Normalise number prefixes which are semanticly minus signs
-                                String normalisedValue = ValueNormaliser.normaliseNumericalValueString(value1);
+                                normalisedValue = ValueNormaliser.normaliseNumericalValueString(normalisedValue);
                                 normalisedValue = ValueNormaliser.removeUnusualCharacterTooltip(normalisedValue);
 				td.appendChild(normalisedValue);
 				td.setClassAttribute((normalisedValue.trim().length() == 0) ? CELL_EMPTY : CELL_FULL);
@@ -1550,11 +1554,4 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 		return annotatedSvgChunk;
 	}
 
-    public TextStructurer getOrCreateTextStructurer() {
-        if (this.textStructurer == null) {    
-            this.textStructurer = new TextStructurer();
-        }
-        
-        return this.textStructurer;
-    }
 }
