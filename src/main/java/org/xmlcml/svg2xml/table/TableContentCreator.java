@@ -114,7 +114,7 @@ public class TableContentCreator extends PageLayoutAnalyzer {
 	private IntRangeArray rangesArray;
 	private TableTitle tableTitle;
 	private boolean addIndents;
-        private boolean treatIndentsAsSubtables = true;
+        private boolean treatIndentsAsSubtables = false;
         private boolean splitCompoundNumericalColumns = true;
 	private TableTitleSection tableTitleSection;
 	private TableHeaderSection tableHeaderSection;
